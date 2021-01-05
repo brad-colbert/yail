@@ -14,7 +14,7 @@ else
   RMDIR = $(RM) -r
 endif
 
-SOURCES = imgload.c displaylist.c
+SOURCES = imgload.c displaylist.c readNetPBM.c
 
 PROGRAM = imgload
 
