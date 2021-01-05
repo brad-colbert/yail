@@ -4,6 +4,9 @@
 // Some defines to make my life easier
 #define SAVMSC 0x58  // Stores address for start of screen memory
 #define SDLSTL 0x230
+#define GPRIOR 0x26F
+#define COLOR1 0x2C5
+#define COLOR2 0x2C6
 
 // Important ASCII codes
 #define ASC_TAB 0x09
