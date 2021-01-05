@@ -12,7 +12,7 @@
 #include "types.h"
 #include "consts.h"
 
-#define GR_8
+//#define GR_8
 
 // This organizes the display list before the screen memory
 #define MY_DL 0x6C00
@@ -31,12 +31,12 @@ int fd;
 //
 int main()
 {
-    const unsigned memw = 320;
-    //const unsigned memh = 192;
-    const unsigned memh = 220;
     unsigned ORG_DLIST = PEEKW(SDLSTL);
-    byte ORG_GFX_STATE = PEEK(623);
-    // We are creating a header of Gr8 to the standard 24 lines of text.
+    #ifdef GR_8
+    #else
+    byte ORG_GFX_STATE = PEEK(GPRIOR);
+    #endif
+    // 320x220
     struct dl_def dls[] = { {8, DL_MAP320x1x1, 102, MY_SCRN_MEM},
                             {0, DL_MAP320x1x1, 102, MY_SCRN_MEM_B},
                             {0, DL_MAP320x1x1, 16, MY_SCRN_MEM_C} };
@@ -54,16 +54,17 @@ int main()
         readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
         #else
         readPGMIntoGfx9(fd, (void*)(MY_SCRN_MEM_C + 0x0400), (void*)MY_SCRN_MEM);
+        //readPGMIntoGfx9(fd, (void*)0xA000, (void*)MY_SCRN_MEM);
         #endif
 
         printf("Hit <Return> to view");
         cgetc();
 
         #ifdef GR_8
-        POKE(709, 0);
-        POKE(710, 15);
+        POKE(COLOR1, 0);
+        POKE(COLOR2, 15);
         #else
-        POKE(623,ORG_GFX_STATE | 64);
+        POKE(GPRIOR,ORG_GFX_STATE | 64);
         #endif
         POKEW(SDLSTL, MY_DL);
     }
@@ -75,7 +76,10 @@ int main()
     cgetc();  // hit key to quit
 
     // Return the graphics modes
+    #ifdef GR_8
+    #else
     POKE(623, ORG_GFX_STATE);
+    #endif
     POKEW(SDLSTL, ORG_DLIST);
 
     return 0;

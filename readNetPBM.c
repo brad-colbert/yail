@@ -112,7 +112,7 @@ int readHeader(int fd)
 // Assumes destination will be Gfx8 formatted
 void readPBMIntoGfx8(int fd, void* dmem)
 {
-    const unsigned MAX_SIZE = 40 * 102; // Max size of temp buffer (4080 bytes)
+    const unsigned MAX_SIZE = 40 * 102; // Max size of blocks (4080 bytes)
     unsigned numbytes = 0;
     unsigned numread = 0;
     
@@ -137,8 +137,8 @@ void readPBMIntoGfx8(int fd, void* dmem)
 // Assumes destination will be Gfx9 formatted
 void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
 {
+    //const unsigned TMAX_SIZE = 0x1000; // Max size of temp buffer (2720 bytes) about 2/3rds
     const unsigned TMAX_SIZE = 80 * 34; // Max size of temp buffer (2720 bytes) about 2/3rds
-    //void* tmem = (void*)(MY_SCRN_MEM_C + 0x0400);
     void* next_dmem = (byte*)dmem + 0x1000;
     unsigned numread, i;
     unsigned numbytes = 0;
