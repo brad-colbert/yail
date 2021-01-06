@@ -81,8 +81,6 @@ unsigned readComment(int fd)
 
 int readHeader(int fd)
 {
-    //int i;
-
     count = 0;
 
     // Read the header
@@ -99,17 +97,7 @@ int readHeader(int fd)
     if(buff[0] == ASC_HASH)  // Just read a comment, read more
         count = readLine(fd);
 
-    // Read the width and height
-    /*
-    printf("%d: ", count);
-    for(i = 0; i < count; i++)
-        printf("%02x ", buff[i]);
-    printf("\n");
-    */
     parseWidthHeight();
-    /*
-    printf("w=%d h=%d\n", w, h);
-    */
 }
 
 // Reads a file from fb and writes numbytes of it into dmem.
