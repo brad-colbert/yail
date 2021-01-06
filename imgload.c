@@ -38,6 +38,8 @@ int main()
 
         save_current_graphics_state();
 
+        cgetc();
+
         #ifdef GR_8
         set_graphics(GRAPHICS_8);
 

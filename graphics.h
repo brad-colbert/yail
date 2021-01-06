@@ -20,7 +20,7 @@
 #define MY_SCRN_MEM_C 0x9000
 
 //
-#define CONSOLE_MEM 0xCC40  // We should read this from the system before we switch
+#define CONSOLE_MEM 0xBC40  // We should read this from the system before we switch
 
 // Prototypes
 void save_current_graphics_state(void);
