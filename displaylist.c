@@ -7,7 +7,7 @@
 // dl_location - location in memory for the DL
 // dl_def[]    - an array of dl_defs that are used to define the modes
 // n           - the number of dl_def entries
-unsigned makeDisplayList(void* dl_location, struct dl_def dl[], unsigned n)
+unsigned makeDisplayList(void* dl_location, struct dl_def dl[], byte n)
 {
     byte* dl_mem = dl_location;
     int idx;
@@ -24,16 +24,29 @@ unsigned makeDisplayList(void* dl_location, struct dl_def dl[], unsigned n)
         for(jdx = 0; jdx < entry->lines; jdx++)
         {
             if(jdx)
-                *(dl_mem++) = (byte)entry->mode;
+            {
+                if(entry->dli)
+                    *(dl_mem++) = DL_DLI(entry->mode);
+                else
+                    *(dl_mem++) = (byte)entry->mode;
+            }
             else
             {
                 if(entry->address)
                 {
-                    *(dl_mem++) = DL_LMS(entry->mode);
+                    if(entry->dli)
+                        *(dl_mem++) = DL_DLI(DL_LMS(entry->mode));
+                    else
+                        *(dl_mem++) = DL_LMS(entry->mode);
                     *(((unsigned*)dl_mem)++) = entry->address;
                 }
                 else
-                    *(dl_mem++) = (byte)entry->mode;
+                {
+                    if(entry->dli)
+                        *(dl_mem++) = DL_DLI(entry->mode);
+                    else
+                        *(dl_mem++) = (byte)entry->mode;
+                }
             }
         }
     }

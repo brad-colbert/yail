@@ -70,10 +70,10 @@ unsigned readComment(int fd)
         READ_BYTE(fd, b)
         if(b == ASC_LF)
         {
-            printf("\n");
+            //printf("\n");
             break;
         }
-        printf("%02x ", (char)b);
+        //printf("%02x ", (char)b);
     }
 
     return 0;
@@ -81,7 +81,7 @@ unsigned readComment(int fd)
 
 int readHeader(int fd)
 {
-    int i;
+    //int i;
 
     count = 0;
 
@@ -100,12 +100,16 @@ int readHeader(int fd)
         count = readLine(fd);
 
     // Read the width and height
+    /*
     printf("%d: ", count);
     for(i = 0; i < count; i++)
         printf("%02x ", buff[i]);
     printf("\n");
+    */
     parseWidthHeight();
+    /*
     printf("w=%d h=%d\n", w, h);
+    */
 }
 
 // Reads a file from fb and writes numbytes of it into dmem.
@@ -120,7 +124,7 @@ void readPBMIntoGfx8(int fd, void* dmem)
 
     numbytes = (w / 8) * h;
 
-    printf("numbytes=%d\n", numbytes);
+    // printf("numbytes=%d\n", numbytes);
 
     // Have to divide the reads so they are on 4K bounderies
     while(numbytes)
@@ -147,14 +151,14 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
 
     numbytes = w * h;
 
-    printf("numbytes=%d\n", numbytes);
+    // printf("numbytes=%d\n", numbytes);
 
     count = readLine(fd);
     mxp = 0;
-    printf("## %d: ", count);
-    for(i = 0; i < count; i++)
-        printf("%02x ", buff[i]);
-    printf("\n");
+    // printf("## %d: ", count);
+    // for(i = 0; i < count; i++)
+    //     printf("%02x ", buff[i]);
+    // printf("\n");
 
     // Parse the maximum pixel value
     {
@@ -163,12 +167,12 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
         {
             unsigned digit = (unsigned)(buff[i] - ASC_0);
             mxp += pow10(digit, (unsigned)dc);
-            //printf("%d, %d: %02x %d %d\n", i, dc, buff[i], digit, *v);
+            // printf("%d, %d: %02x %d %d\n", i, dc, buff[i], digit, *v);
             dc++;
         } 
     }
 
-    printf("max pixel value = %d\n", mxp);
+    // printf("max pixel value = %d\n", mxp);
 
     while(numread = read(fd, tmem, TMAX_SIZE))
     {
@@ -179,7 +183,7 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
             (byte*)next_dmem += 0x1000;
         }
 
-        printf("%02X + %02x ", dmem, numread/2);
+        // printf("%02X + %02x ", dmem, numread/2);
 
         // Process
         for(i = 0; i < numread/2; i++)
@@ -187,6 +191,6 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
 
         (byte*)dmem += numread/2;
 
-        printf("= %02X\n", dmem);
+        // printf("= %02X\n", dmem);
     }
 }
