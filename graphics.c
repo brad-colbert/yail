@@ -85,30 +85,40 @@ void restore_graphics_state(void)
     POKE(NMIEN, NMI_STATE);
     POKEW(VDSLST, VDSLIST_STATE);
     POKEW(SDLSTL, ORG_DLIST);
-    //POKE(COLOR1, ORG_COLOR1);
-    //POKE(COLOR2, ORG_COLOR2);
+    POKE(COLOR1, ORG_COLOR1);
+    POKE(COLOR2, ORG_COLOR2);
     POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
+}
+
+void graphics_clear()
+{
+    memset((void*)MY_SCRN_MEM, 0x00, 0x3000);
 }
 
 void set_graphics(byte mode)
 {
-    // Clear the last states
-    POKE(NMIEN, NMI_STATE);
-    POKEW(VDSLST, VDSLIST_STATE);
-
     if(console_state)
     {
         switch(mode)
         {
+            case GRAPHICS_0:
+                POKE(NMIEN, NMI_STATE);
+                POKEW(VDSLST, VDSLIST_STATE);
+                POKEW(SDLSTL, ORG_DLIST);
+                POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
+            break;
             case GRAPHICS_8:
+                POKE(GPRIOR, ORG_GPRIOR);     // Turn off GTIA
+                POKE(NMIEN, NMI_STATE);       // Disable the NMI for DLIs'
+                POKEW(VDSLST, VDSLIST_STATE); // Clear the DLI pointer
                 makeDisplayList((void*)IML_DL, command_dl_g8, 4);
-                POKE(COLOR2, 0);
-                POKE(COLOR1, 14);
+                POKE(COLOR2, 0);   // Background black
+                POKE(COLOR1, 14);  // Color maximum luminance
             break;
             case GRAPHICS_9:
                 makeDisplayList((void*)IML_DL, command_dl_g9, 5);
                 POKE(COLOR2, 0);                        // Turn the console black
-                POKE(GPRIOR, ORG_GPRIOR | GFX_9);        // Enable GTIA   
+                POKE(GPRIOR, ORG_GPRIOR | GFX_9);       // Enable GTIA   
                 POKEW(VDSLST, (unsigned)disable_9_dli); // Set the address to our DLI that disables GTIA for the console
                 POKE(NMIEN, NMI_STATE | 192);           // Enable NMI
             break;
@@ -116,10 +126,20 @@ void set_graphics(byte mode)
     }
     else
     {
+        POKE(NMIEN, NMI_STATE);       // Disable the NMI for DLIs'
+        POKEW(VDSLST, VDSLIST_STATE); // Clear the DLI pointer
+
         // Build the display list
         switch(mode)
         {
+            case GRAPHICS_0:
+                POKE(NMIEN, NMI_STATE);
+                POKEW(VDSLST, VDSLIST_STATE);
+                POKEW(SDLSTL, ORG_DLIST);
+                POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
+            break;
             case GRAPHICS_8:
+                POKE(GPRIOR, ORG_GPRIOR);     // Turn off GTIA
             case GRAPHICS_9:
                 makeDisplayList((void*)IML_DL, image_dl, 3);
             break;
@@ -129,8 +149,8 @@ void set_graphics(byte mode)
         switch(mode)
         {
             case GRAPHICS_8:
-                POKE(COLOR2, 0);
-                POKE(COLOR1, 14);
+                POKE(COLOR2, 0);   // Background black
+                POKE(COLOR1, 14);  // Color maximum luminance
             break;
             case GRAPHICS_9:
                 POKE(GPRIOR, ORG_GPRIOR | GFX_9);   // Enable GTIA   
@@ -138,7 +158,12 @@ void set_graphics(byte mode)
         }
     }
 
-    POKEW(SDLSTL, IML_DL);            // Tell ANTIC the address of our display list (use it)
+    switch(mode)
+    {
+        case GRAPHICS_8:
+        case GRAPHICS_9:
+            POKEW(SDLSTL, IML_DL);            // Tell ANTIC the address of our display list (use it)
+    }
 
     GRAPHICS_MODE = mode;
 }

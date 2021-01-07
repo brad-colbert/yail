@@ -10,5 +10,6 @@
 void enable_console(void);
 void disable_console(void);
 void console_update(void);
+void reset_console(void);
 
 #endif // CONSOLE_H

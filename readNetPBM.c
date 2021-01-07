@@ -121,8 +121,6 @@ void readPBMIntoGfx8(int fd, void* dmem)
 
     numbytes = (w / 8) * h;
 
-    // printf("numbytes=%d\n", numbytes);
-
     // Have to divide the reads so they are on 4K bounderies
     while(numbytes)
     {
@@ -138,7 +136,6 @@ void readPBMIntoGfx8(int fd, void* dmem)
 // Assumes destination will be Gfx9 formatted
 void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
 {
-    //const unsigned TMAX_SIZE = 0x1000; // Max size of temp buffer (2720 bytes) about 2/3rds
     const unsigned TMAX_SIZE = 80 * 34; // Max size of temp buffer (2720 bytes) about 2/3rds
     void* next_dmem = (byte*)dmem + 0x1000;
     unsigned numread, i;
@@ -148,14 +145,8 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
 
     numbytes = w * h;
 
-    // printf("numbytes=%d\n", numbytes);
-
     count = readLine(fd);
     mxp = 0;
-    // printf("## %d: ", count);
-    // for(i = 0; i < count; i++)
-    //     printf("%02x ", buff[i]);
-    // printf("\n");
 
     // Parse the maximum pixel value
     {
@@ -169,8 +160,6 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
         } 
     }
 
-    // printf("max pixel value = %d\n", mxp);
-
     while(numread = read(fd, tmem, TMAX_SIZE))
     {
         // Check if we moved passed the next memory block.  If so, switch to it.
@@ -180,15 +169,11 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
             (byte*)next_dmem += 0x1000;
         }
 
-        // printf("%02X + %02x ", dmem, numread/2);
-
         // Process
         for(i = 0; i < numread/2; i++)
             ((byte*)dmem)[i] |= (( ((byte*)tmem)[i*2] & 0xF0) | (( ((byte*)tmem)[i*2+1] & 0xF0) >> 4));
 
         (byte*)dmem += numread/2;
-
-        // printf("= %02X\n", dmem);
     }
 }
 
@@ -205,7 +190,7 @@ void image_file_type(char* filename)
         // try to get the extension
         for(i = 0; i < len; ++i)
         {
-            if(filename[i] == 0x0E)
+            if((filename[i] == 0x0E) || (filename[i] == 0x2E))
             {
                 if((len - (i+1)) > 2)
                 {
@@ -227,60 +212,3 @@ void image_file_type(char* filename)
         }
     }
 }
-
-#if 0
-byte read_image_file(char* filename, void* tmem, void* dmem)
-{
-    byte status = 0;
-    byte len = strlen(filename);
-    if(len > 4)  // ext plus .
-    {
-        int fd = open(filename, O_RDONLY);
-        if(fd >= 0)
-        {
-            #ifdef JUST_LOAD
-            status = FILETYPE_PBM;
-            readPBMIntoGfx8(fd, dmem);
-            #else
-            int i;
-            byte* ext = 0x0;
-
-            // try to get the extension
-            for(i = 0; i < len; ++i)
-            {
-                if(filename[i] == 0x0E)
-                    if((len - (i+1)) == 3)
-                    {
-                        ext = filename + i + 1;
-                        break;
-                    }
-            }
-
-            if(ext)
-            {
-                if(strncmp(ext, "pbm", 40))
-                {
-                    status = FILETYPE_PBM;
-                    readPBMIntoGfx8(fd, dmem);
-                }
-                if(strncmp(ext, "pgm", 40))
-                {
-                    status = FILETYPE_PGM;
-                    readPGMIntoGfx9(fd, tmem, dmem);
-                }
-            }
-            else
-            {
-                        gotoy(10);
-        cprintf("+++++ %s", filename);
-
-            }
-            #endif
-        }
-
-        close(fd);
-    }
-
-    return status;
-}
-#endif

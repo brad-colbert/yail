@@ -16,9 +16,6 @@ unsigned makeDisplayList(void* dl_location, struct dl_def dl[], byte n)
     byte* dl_mem = dl_location;
     int idx;
 
-    // Wipe the DL memory
-    //memset(dl_mem, 0x0, 0x400); // 1K work
-
     // Set new DL
     for(idx = 0; idx < n; idx++)
     {
