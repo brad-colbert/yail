@@ -32,6 +32,34 @@ extern byte console_state;
 //
 int main()
 {
+    // Clear the text and memory
+    clrscr();
+    memset((void*)MY_SCRN_MEM, 0x00, 0x3000);
+
+    save_current_graphics_state();
+    
+    enable_console();
+    
+    set_graphics(GRAPHICS_9);
+    
+    gotoxy(0,0);
+    cursor(1);
+
+    console_update();
+    /*
+    fd = open(FILENAME, O_RDONLY);
+    if(fd >= 0)
+    {
+        readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
+    }
+    close(fd);
+
+    cgetc();
+    */
+
+    restore_graphics_state();
+
+    #if 0
     char input;
     fd = open(FILENAME, O_RDONLY);
     if(fd >= 0)
@@ -41,21 +69,14 @@ int main()
         memset((void*)MY_SCRN_MEM, 0x00, 0x3000);
 
         save_current_graphics_state();
-
-        #ifdef GR_8
-        set_graphics(GRAPHICS_8);
-
-        readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
-        #else
-        set_graphics(GRAPHICS_9);
-
-        readPGMIntoGfx9(fd, (void*)(MY_SCRN_MEM_C + 0x0400), (void*)MY_SCRN_MEM);
-        #endif
-
-        clrscr();
+        
+        enable_console();
+        
         gotoxy(0,0);
         cursor(1);
-        
+
+        console_update();
+        /*
         do
         {
             input = cgetc();
@@ -75,6 +96,7 @@ int main()
             }
 
         } while(input != CH_ESC);
+        */
 
         restore_graphics_state();
     }
@@ -90,6 +112,7 @@ int main()
     // POKE(GPRIOR, ORG_GFX_STATE); // Restore the previous priority states
     // #endif
     // POKEW(SDLSTL, ORG_DLIST);    // Tell ANTIC to use the original display list
+    #endif
 
     return 0;
 }

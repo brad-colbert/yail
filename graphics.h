@@ -22,6 +22,7 @@
 #define MY_SCRN_MEM 0x8000 // 1024 byte aligned
 #define MY_SCRN_MEM_B 0x9000
 #define MY_SCRN_MEM_C 0xA000
+#define MY_SCRN_MEM_TEMP MY_SCRN_MEM_C + 0x0100
 
 //
 #define CONSOLE_MEM 0xBC40  // We should read this from the system before we switch
@@ -30,5 +31,6 @@
 void save_current_graphics_state(void);
 void restore_graphics_state(void);
 void set_graphics(byte mode);
+void set_graphics_console(byte enable);
 
 #endif // GRAPHICS_H

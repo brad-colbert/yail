@@ -106,7 +106,7 @@ void set_graphics(byte mode)
                 POKE(COLOR1, 14);
             break;
             case GRAPHICS_9:
-                makeDisplayList((void*)IML_DL, (struct dl_def*)&command_dl_g9, 5);
+                makeDisplayList((void*)IML_DL, command_dl_g9, 5);
                 POKE(COLOR2, 0);                        // Turn the console black
                 POKE(GPRIOR, ORG_GPRIOR | GFX_9);        // Enable GTIA   
                 POKEW(VDSLST, (unsigned)disable_9_dli); // Set the address to our DLI that disables GTIA for the console
@@ -139,4 +139,12 @@ void set_graphics(byte mode)
     }
 
     POKEW(SDLSTL, IML_DL);            // Tell ANTIC the address of our display list (use it)
+
+    GRAPHICS_MODE = mode;
+}
+
+void set_graphics_console(byte enable)
+{
+    console_state = enable;
+    set_graphics(GRAPHICS_MODE);
 }

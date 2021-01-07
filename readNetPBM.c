@@ -1,14 +1,21 @@
 // Copyright (C) 2021 Brad Colbert
 
 // Read routines for the NetPBM formats (PBM, PGM, so far)
-#include <unistd.h>
-#include <stdio.h>
-
 #include "readNetPBM.h"
 #include "types.h"
 #include "consts.h"
 
-// Globals (local)
+#include <conio.h>
+
+#include <unistd.h>
+#include <string.h>
+#include <stdio.h>
+#include <fcntl.h>
+
+// Globals
+byte IMAGE_FILE_TYPE = 0;
+
+// Locals
 int count;
 byte b, buff[256];
 int w = 0;
@@ -184,3 +191,96 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
         // printf("= %02X\n", dmem);
     }
 }
+
+void image_file_type(char* filename)
+{
+    byte len = strlen(filename);
+    IMAGE_FILE_TYPE = 0;
+
+    if(len > 4)  // ext plus .
+    {
+        char* ext = 0x0;
+        int i;
+
+        // try to get the extension
+        for(i = 0; i < len; ++i)
+        {
+            if(filename[i] == 0x0E)
+            {
+                if((len - (i+1)) > 2)
+                {
+                    ext = filename + i + 1;
+                    break;
+                }
+            }
+        }
+
+        if(ext)
+        {
+            if(ext[0] == 'p')
+            {
+                if(ext[1] == 'b')
+                    IMAGE_FILE_TYPE = FILETYPE_PBM;
+                if(ext[1] == 'g')
+                    IMAGE_FILE_TYPE = FILETYPE_PGM;                
+            }
+        }
+    }
+}
+
+#if 0
+byte read_image_file(char* filename, void* tmem, void* dmem)
+{
+    byte status = 0;
+    byte len = strlen(filename);
+    if(len > 4)  // ext plus .
+    {
+        int fd = open(filename, O_RDONLY);
+        if(fd >= 0)
+        {
+            #ifdef JUST_LOAD
+            status = FILETYPE_PBM;
+            readPBMIntoGfx8(fd, dmem);
+            #else
+            int i;
+            byte* ext = 0x0;
+
+            // try to get the extension
+            for(i = 0; i < len; ++i)
+            {
+                if(filename[i] == 0x0E)
+                    if((len - (i+1)) == 3)
+                    {
+                        ext = filename + i + 1;
+                        break;
+                    }
+            }
+
+            if(ext)
+            {
+                if(strncmp(ext, "pbm", 40))
+                {
+                    status = FILETYPE_PBM;
+                    readPBMIntoGfx8(fd, dmem);
+                }
+                if(strncmp(ext, "pgm", 40))
+                {
+                    status = FILETYPE_PGM;
+                    readPGMIntoGfx9(fd, tmem, dmem);
+                }
+            }
+            else
+            {
+                        gotoy(10);
+        cprintf("+++++ %s", filename);
+
+            }
+            #endif
+        }
+
+        close(fd);
+    }
+
+    return status;
+}
+#endif

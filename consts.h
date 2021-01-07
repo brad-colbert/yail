@@ -30,4 +30,8 @@
 #define ASC_HASH 0x23
 #define ASC_0 0x30
 
+//
+#define TRUE 0xFF
+#define FALSE 0x00;
+
 #endif // CONSTS_H
