@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Brad Colbert
+
 #include <conio.h>
 #include <stdio.h>
 #include <string.h>
@@ -10,7 +12,7 @@
 #include "types.h"
 #include "consts.h"
 
-#define GR_9
+#define GR_8
 
 #ifdef GR_8
 #define FILENAME "MTFUJID.PBM"
@@ -44,23 +46,12 @@ int main()
         set_graphics(GRAPHICS_8);
 
         readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
-
-        //enable_console();
-        //set_graphics(GRAPHICS_8);
         #else
         set_graphics(GRAPHICS_9);
 
         readPGMIntoGfx9(fd, (void*)(MY_SCRN_MEM_C + 0x0400), (void*)MY_SCRN_MEM);
-
-        //enable_console();
-        //set_graphics(GRAPHICS_9);
         #endif
 
-        /*
-        gotoxy(0,0);
-        cputs("Hit <Return> to continue...\n\r");
-        cgetc();
-        */
         clrscr();
         gotoxy(0,0);
         cursor(1);
@@ -71,10 +62,12 @@ int main()
 
             if(input == CH_ENTER)
             {
-                //clrscr();
                 console_state = !console_state;
-                restore_graphics_state();
+                #ifdef GR_8
+                set_graphics(GRAPHICS_8);
+                #else
                 set_graphics(GRAPHICS_9);
+                #endif
             }
             else
             {

@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Brad Colbert
+
 #include "displaylist.h"
 
 #include <atari.h>

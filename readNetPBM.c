@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Brad Colbert
+
 // Read routines for the NetPBM formats (PBM, PGM, so far)
 #include <unistd.h>
 #include <stdio.h>

@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Brad Colbert
+
 #include "graphics.h"
 #include "console.h"
 #include "displaylist.h"
@@ -11,13 +13,13 @@
 #include <stdio.h>
 
 // Globals (private)
-//byte ORG_GFX_STATE = 0x00;
+unsigned ORG_DLIST = 0;
+unsigned VDSLIST_STATE = 0;
 byte ORG_GPRIOR = 0x00;
-unsigned ORG_DLIST;
-unsigned VDSLIST_STATE;
-byte NMI_STATE;
-byte WSYNC_STATE;
+byte NMI_STATE = 0x00;
+byte WSYNC_STATE = 0x00;
 byte ORG_COLOR1, ORG_COLOR2;
+byte GRAPHICS_MODE = 0x00;
 //unsigned CONSOLE_MEM = 0xFFFF;
 
 // Display list definitions
@@ -90,6 +92,10 @@ void restore_graphics_state(void)
 
 void set_graphics(byte mode)
 {
+    // Clear the last states
+    POKE(NMIEN, NMI_STATE);
+    POKEW(VDSLST, VDSLIST_STATE);
+
     if(console_state)
     {
         switch(mode)
@@ -107,8 +113,6 @@ void set_graphics(byte mode)
                 POKE(NMIEN, NMI_STATE | 192);           // Enable NMI
             break;
         }
-
-        POKEW(SDLSTL, IML_DL);                  // Tell ANTIC the address of our display list (use it)
     }
     else
     {
@@ -132,8 +136,7 @@ void set_graphics(byte mode)
                 POKE(GPRIOR, ORG_GPRIOR | GFX_9);   // Enable GTIA   
             break;
         }
-
-        POKEW(SDLSTL, IML_DL);            // Tell ANTIC the address of our display list (use it)
     }
-    
+
+    POKEW(SDLSTL, IML_DL);            // Tell ANTIC the address of our display list (use it)
 }

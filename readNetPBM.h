@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Brad Colbert
+
 #ifndef READ_NETPBM_H
 #define READ_NETPBM_H
 

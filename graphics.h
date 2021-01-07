@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Brad Colbert
+
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
@@ -7,6 +9,9 @@
 #define GRAPHICS_0 0
 #define GRAPHICS_8 1
 #define GRAPHICS_9 2
+#define GRAPHICS_CONSOLE_EN 0x10
+#define GRAPHICS_8_CONSOLE GRAPHICS_8 | GRAPHICS_CONSOLE_EN
+#define GRAPHICS_9_CONSOLE GRAPHICS_9 | GRAPHICS_CONSOLE_EN
 
 // Display lists memory locations
 #define IML_DL 0x7000

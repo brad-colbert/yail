@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Brad Colbert
+
 #ifndef CONSOLE_H
 #define CONSOLE_H
 

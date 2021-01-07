@@ -1,3 +1,5 @@
+# Copyright (C) 2021 Brad Colbert
+
 CC65_TARGET = atari
 
 ifneq ($(shell echo),)

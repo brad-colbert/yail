@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Brad Colbert
+
 #ifndef DISPLAY_LIST_H
 #define DISPLAY_LIST_H
 

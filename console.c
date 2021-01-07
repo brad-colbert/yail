@@ -1,3 +1,5 @@
+// Copyright (C) 2021 Brad Colbert
+
 #include "console.h"
 #include "types.h"
 
