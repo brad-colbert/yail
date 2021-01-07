@@ -25,10 +25,12 @@ int fd;
 extern byte ORG_GFX_STATE;
 extern unsigned ORG_DLIST;
 extern byte NMI_STATE;
+extern byte console_state;
 
 //
 int main()
 {
+    char input;
     fd = open(FILENAME, O_RDONLY);
     if(fd >= 0)
     {
@@ -38,28 +40,48 @@ int main()
 
         save_current_graphics_state();
 
-        cgetc();
-
         #ifdef GR_8
         set_graphics(GRAPHICS_8);
 
         readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
 
-        enable_console();
-        set_graphics(GRAPHICS_8);
+        //enable_console();
+        //set_graphics(GRAPHICS_8);
         #else
         set_graphics(GRAPHICS_9);
 
         readPGMIntoGfx9(fd, (void*)(MY_SCRN_MEM_C + 0x0400), (void*)MY_SCRN_MEM);
 
-        enable_console();
-        set_graphics(GRAPHICS_9);
+        //enable_console();
+        //set_graphics(GRAPHICS_9);
         #endif
 
-        //printf("Hit <Return> to view");
+        /*
         gotoxy(0,0);
         cputs("Hit <Return> to continue...\n\r");
         cgetc();
+        */
+        clrscr();
+        gotoxy(0,0);
+        cursor(1);
+        
+        do
+        {
+            input = cgetc();
+
+            if(input == CH_ENTER)
+            {
+                //clrscr();
+                console_state = !console_state;
+                restore_graphics_state();
+                set_graphics(GRAPHICS_9);
+            }
+            else
+            {
+                cputc(input);
+            }
+
+        } while(input != CH_ESC);
 
         restore_graphics_state();
     }
@@ -68,18 +90,6 @@ int main()
         printf("Unable to open the file %s\n", FILENAME);
     }
     
-    /*
-    clrscr();
-    gotoxy(0,0);
-    cursor(1);
-    input = cgetc();  // hit key to quit
-    while(input != CH_ESC)
-    {
-        cputc(input);
-        input = cgetc();
-    }
-    */
-
     // // Return the graphics modes
     // #ifdef GR_8
     // #else

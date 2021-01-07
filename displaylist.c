@@ -1,7 +1,9 @@
-#include <stdio.h>
+#include "displaylist.h"
+
 #include <atari.h>
 
-#include "displaylist.h"
+#include <stdio.h>
+#include <string.h>
 
 // Builds a display list that is defined with an array of dl_def's, placing it at dl_location.
 // dl_location - location in memory for the DL
@@ -11,6 +13,11 @@ unsigned makeDisplayList(void* dl_location, struct dl_def dl[], byte n)
 {
     byte* dl_mem = dl_location;
     int idx;
+
+    // Wipe the DL memory
+    //memset(dl_mem, 0x0, 0x400); // 1K work
+
+    // Set new DL
     for(idx = 0; idx < n; idx++)
     {
         int jdx;

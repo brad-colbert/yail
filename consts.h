@@ -7,10 +7,18 @@
 #define SDLSTL 0x230
 #define GPRIOR 0x26F
 #define PRIOR 0xD01B
+#define COLOR0 0x2C4
 #define COLOR1 0x2C5
 #define COLOR2 0x2C6
+#define COLOR3 0x2C7
+#define COLOR4 0x2C8
 #define WSYNC 0xD40A
 #define NMIEN 0xD40E
+
+// GTIA graphics bitmasks
+#define GFX_9 0x40
+#define GFX_10 0x80
+#define GFX_11 0xC0
 
 // Important ASCII codes
 #define ASC_TAB 0x09
