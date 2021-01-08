@@ -26,32 +26,32 @@ unsigned makeDisplayList(void* dl_location, struct dl_def dl[], byte n)
         for(jdx = 0; jdx < entry->blank_lines/8; jdx++)
             *(dl_mem++) = (byte)DL_BLK8;
 
-        // Now handle mode.  No memory, just mode line, else DL_LMS
+        // Handle mode.
         for(jdx = 0; jdx < entry->lines; jdx++)
         {
-            if(jdx)
+            if(jdx) // Following line after inital definition which may reference memory
             {
                 if(entry->dli)
-                    *(dl_mem++) = DL_DLI(entry->mode);
+                    *(dl_mem++) = DL_DLI(entry->mode);  // DLI flag triggered so generate
                 else
                     *(dl_mem++) = (byte)entry->mode;
             }
-            else
+            else   // Initial line, may define an LMS
             {
-                if(entry->address)
+                if(entry->address)  // Screen memory defined, add address following
                 {
                     if(entry->dli)
-                        *(dl_mem++) = DL_DLI(DL_LMS(entry->mode));
+                        *(dl_mem++) = DL_DLI(DL_LMS(entry->mode));  // DLI flag triggered so generate
                     else
                         *(dl_mem++) = DL_LMS(entry->mode);
-                    *(((unsigned*)dl_mem)++) = entry->address;
+                    *(((unsigned*)dl_mem)++) = entry->address;  // Add the address
                 }
                 else
                 {
                     if(entry->dli)
-                        *(dl_mem++) = DL_DLI(entry->mode);
+                        *(dl_mem++) = DL_DLI(entry->mode);  // DLI flag triggered so generate
                     else
-                        *(dl_mem++) = (byte)entry->mode;
+                        *(dl_mem++) = (byte)entry->mode;  // Just a plain ol' mode line
                 }
             }
         }

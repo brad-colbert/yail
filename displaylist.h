@@ -9,10 +9,10 @@
 struct dl_def
 {
     byte blank_lines;
-    byte mode;    // From the Antic modes
-    byte lines;   // # of lines of the mode
+    byte mode;        // From the Antic modes
+    byte lines;       // # of lines of the mode
+    byte dli;         // Switch for DLI
     unsigned address; // Address of screen memory for mode, 0x0000 if use SAVMSC + offset
-    byte dli; // Switch for DLI
 };
 
 // Builds a display list that is defined with an array of dl_def's, placing it at dl_location.
