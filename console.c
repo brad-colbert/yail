@@ -83,7 +83,7 @@ byte get_tokens(byte endx)
 
         if(x < endx)
         {
-            if(count < 5)
+            if(count < 3)
             {
                 tokens[count++] = &line[x];
                 x = skip_text(x);
@@ -187,12 +187,21 @@ void process_command(byte ntokens)
     }
 }
 
+#define DEBUG_CONSOLE
+
 void console_update(void)
 {
     while(!done)
     {
         byte input = cgetc();
         byte x = wherex();
+
+        // Handle quit
+        if(input == CH_ESC)
+        {
+            set_graphics(GRAPHICS_0);
+            return;
+        }
 
         // Control the display of the console:
         // Keypress, if the console is not up, bring it up.
@@ -268,12 +277,15 @@ void console_update(void)
                 line[x] = input;
                 line[x+1] = 0x0;
                 #ifdef DEBUG_CONSOLE
-                for(i=0; i<x; ++i)
                 {
-                    gotoxy(i*2, 1);
-                    cprintf("%02x ", line[i]);
+                    byte i;
+                    for(i=0; i<x; ++i)
+                    {
+                        gotoxy(i*2, 1);
+                        cprintf("%02x ", line[i]);
+                    }
+                    gotoxy(x, 0);
                 }
-                gotoxy(x, 0);
                 #endif
                 cputc(input);
         }

@@ -68,8 +68,10 @@ $(DISK): $(PROGRAM)
 	cp dos.sys atr/dos.sys
 	cp dup.sys atr/dup.sys
 	cp mtfujid.pbm atr/mtfujid.pbm
-	cp mtfujid.pbm atr/mtfujid
 	cp mtfuji.pgm atr/mtfuji.pgm
+	cp lena.pgm atr/lena.pgm
+	cp lena.pbm atr/lena.pbm
+	cp imgload atr/autorun.sys
 	@$(foreach file,$(PROGRAM),$(ATR_WRITE_recipe))
 	$(DIR2ATR) -S -b Dos25 $@ atr
 	@$(RMDIR) atr
