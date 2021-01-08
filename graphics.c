@@ -23,20 +23,20 @@ byte GRAPHICS_MODE = 0x00;
 //unsigned CONSOLE_MEM = 0xFFFF;
 
 // Display list definitions
-struct dl_def image_dl[] = { {8, DL_MAP320x1x1, 102, MY_SCRN_MEM, 0},
-                             {0, DL_MAP320x1x1, 102, MY_SCRN_MEM_B, 0},
-                             {0, DL_MAP320x1x1, 16, MY_SCRN_MEM_C, 0}
+struct dl_def image_dl[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
+                             {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
+                             {0, DL_MAP320x1x1, 16, 0, MY_SCRN_MEM_C}
                             };
-struct dl_def command_dl_g8[] = { {8, DL_MAP320x1x1, 102, MY_SCRN_MEM, 0},
-                                  {0, DL_MAP320x1x1, 102, MY_SCRN_MEM_B, 0},
-                                  {0, DL_MAP320x1x1, 8, MY_SCRN_MEM_C, 0},
-                                  {0, DL_CHR40x8x1, 1, CONSOLE_MEM, 0}
+struct dl_def command_dl_g8[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
+                                  {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
+                                  {0, DL_MAP320x1x1, 8, 0, MY_SCRN_MEM_C},
+                                  {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
                                 };
-struct dl_def command_dl_g9[] = { {8, DL_MAP320x1x1, 102, MY_SCRN_MEM, 0},
-                                  {0, DL_MAP320x1x1, 102, MY_SCRN_MEM_B, 0},
-                                  {0, DL_MAP320x1x1, 7, MY_SCRN_MEM_C, 0},
-                                  {0, DL_MAP320x1x1, 1, 0x0, 1},
-                                  {0, DL_CHR40x8x1, 1, CONSOLE_MEM, 1}
+struct dl_def command_dl_g9[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
+                                  {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
+                                  {0, DL_MAP320x1x1, 7, 0, MY_SCRN_MEM_C},
+                                  {0, DL_MAP320x1x1, 1, 1, 0x0},
+                                  {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM}
                                 };
 
 // Externals
