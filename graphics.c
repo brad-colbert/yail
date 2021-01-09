@@ -97,6 +97,9 @@ void graphics_clear()
 
 void set_graphics(byte mode)
 {
+    // Turn off ANTIC while we muck with the DL
+    POKE(SDMCTL, 0);
+
     if(console_state)
     {
         switch(mode)
@@ -164,6 +167,9 @@ void set_graphics(byte mode)
         case GRAPHICS_9:
             POKEW(SDLSTL, IML_DL);            // Tell ANTIC the address of our display list (use it)
     }
+
+    // Turn ANTIC back on
+    POKE(SDMCTL, 0x22);
 
     GRAPHICS_MODE = mode;
 }

@@ -6,6 +6,7 @@
 // Some defines to make my life easier
 #define SAVMSC 0x58  // Stores address for start of screen memory
 #define VDSLST 0x200
+#define SDMCTL 0x22F
 #define SDLSTL 0x230
 #define GPRIOR 0x26F
 #define PRIOR 0xD01B
