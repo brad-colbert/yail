@@ -48,22 +48,36 @@ void disable_9_dli(void);  // prototype for below
 // Enable Gfx 9
 #pragma optimize(push, off)
 void enable_9_dli(void) {
-    __asm__("sta %w", WSYNC);
     __asm__("pha");
+    __asm__("tya");
+    __asm__("pha");
+    __asm__("txa");
+    __asm__("pha");
+    __asm__("sta %w", WSYNC);
     POKE(PRIOR, ORG_GPRIOR | GFX_9);
     POKEW(VDSLST, (unsigned)disable_9_dli);
     __asm__("pla");
+    __asm__("tax");
+    __asm__("pla");
+    __asm__("tay");
+    __asm__("pla");
     __asm__("rti");
 }
-#pragma optimize(pop)
 
 // Disable Gfx 9
-#pragma optimize(push, off)
 void disable_9_dli(void) {
-    __asm__("sta %w", WSYNC);
     __asm__("pha");
+    __asm__("tya");
+    __asm__("pha");
+    __asm__("txa");
+    __asm__("pha");
+    __asm__("sta %w", WSYNC);
     POKE(PRIOR, ORG_GPRIOR);
     POKEW(VDSLST, (unsigned)enable_9_dli);
+    __asm__("pla");
+    __asm__("tax");
+    __asm__("pla");
+    __asm__("tay");
     __asm__("pla");
     __asm__("rti");
 }
