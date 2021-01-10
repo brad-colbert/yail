@@ -114,6 +114,25 @@ void process_command(byte ntokens)
     if(!ntokens)
         return;
 
+    if(strncmp(tokens[0], "help", 4) == 0)
+    {
+        const char help[] =
+        "help - This screan\n\r"
+        "quit - Exit this utility\n\r"
+        "cls  - Clear the image display\n\r"
+        "gfx  - [0,8,9] Set the graphics mode\n\r"
+        "load - [filename] Load and display file\n\r"
+        "\n\r"
+        "Any key to continue...\n\r";
+
+        byte last_graphics_mode = GRAPHICS_MODE;  // Save current graphics mode
+        set_graphics(GRAPHICS_0);                 // Switch to text mode
+        gotoxy(0,0);                              // Start at the console origin
+        cputs(help);                              // Show the help text
+        cgetc();                                  // Wait
+        set_graphics(last_graphics_mode);         // Switch back to starting graphics mode
+    }
+
     if(strncmp(tokens[0], "quit", 4) == 0)
     {
         done = TRUE;
@@ -144,7 +163,7 @@ void process_command(byte ntokens)
 
     if(strncmp(tokens[0], "cls", 3) == 0)
     {
-        memset((void*)MY_SCRN_MEM, 0x00, 0x2800);
+        graphics_clear();
     }
 
     if(strncmp(tokens[0], "load", 4) == 0)
@@ -187,7 +206,7 @@ void process_command(byte ntokens)
     }
 }
 
-#define DEBUG_CONSOLE
+//#define DEBUG_CONSOLE
 
 void console_update(void)
 {

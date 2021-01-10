@@ -53,7 +53,7 @@ void enable_9_dli(void) {
     __asm__("pha");
     __asm__("txa");
     __asm__("pha");
-    __asm__("sta %w", WSYNC);
+    //__asm__("sta %w", WSYNC);
     POKE(PRIOR, ORG_GPRIOR | GFX_9);
     POKEW(VDSLST, (unsigned)disable_9_dli);
     __asm__("pla");
@@ -106,7 +106,7 @@ void restore_graphics_state(void)
 
 void graphics_clear()
 {
-    memset((void*)MY_SCRN_MEM, 0x00, 0x3000);
+    memset((void*)MY_SCRN_MEM, 0x00, 0x2280);
 }
 
 void set_graphics(byte mode)
