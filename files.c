@@ -1,6 +1,8 @@
 // Copyright (C) 2021 Brad Colbert
 
 #include "files.h"
+#include "console.h"
+#include "readNetPBM.h"
 #include "graphics.h"
 #include "version.h"
 
@@ -18,23 +20,23 @@ void save_file(const char filename[],
                struct dli_store dli_mem[MAX_N_DLI],
                struct mem_store gfx_mem[MAX_N_MEM])
 {
-    int fp = open(filename, O_WRONLY);
+    int fd = open(filename, O_WRONLY);
 
-    if(fp >= 0)
+    if(fd >= 0)
     {
         byte i = 0, b;
 
         // Write the version
         b = MAJOR_VERSION;
-        write(fp, &b, 1);
+        write(fd, &b, 1);
         b = MINOR_VERSION;
-        write(fp, &b, 1);
+        write(fd, &b, 1);
         b = BUILD_VERSION;
-        write(fp, &b, 1);
+        write(fd, &b, 1);
 
         // Write the graphics mode
         b = GRAPHICS_MODE;
-        write(fp, &b, 1);
+        write(fd, &b, 1);
 
         // Write the DLs
         while(i < MAX_N_DL)
@@ -42,10 +44,10 @@ void save_file(const char filename[],
             if(dl_mem[i].size)
             {
                 b = DL_TOKEN;
-                write(fp, &b, 1);
-                write(fp, &dl_mem[i].mem, sizeof(unsigned));  // Write the memory location
-                write(fp, &dl_mem[i].size, sizeof(unsigned));
-                write(fp, dl_mem[i].mem, dl_mem[i].size);
+                write(fd, &b, 1);
+                write(fd, &dl_mem[i].mem, sizeof(unsigned));  // Write the memory location
+                write(fd, &dl_mem[i].size, sizeof(unsigned));
+                write(fd, dl_mem[i].mem, dl_mem[i].size);
             }
             else
                 break;
@@ -59,10 +61,10 @@ void save_file(const char filename[],
             if(dli_mem[i].size)
             {
                 b = DLI_TOKEN;
-                write(fp, &b, 1);
-                write(fp, &dli_mem[i].mem, 2);  // Write the memory location
-                write(fp, &dli_mem[i].size, sizeof(unsigned));
-                write(fp, dli_mem[i].mem, dli_mem[i].size);
+                write(fd, &b, 1);
+                write(fd, &dli_mem[i].mem, 2);  // Write the memory location
+                write(fd, &dli_mem[i].size, sizeof(unsigned));
+                write(fd, dli_mem[i].mem, dli_mem[i].size);
             }
             else
                 break;
@@ -77,10 +79,10 @@ void save_file(const char filename[],
             if(gfx_mem[i].size)
             {
                 b = MEM_TOKEN;
-                write(fp, &b, 1);
-                write(fp, &gfx_mem[i].mem, 2);  // Write the memory location
-                write(fp, &gfx_mem[i].size, sizeof(unsigned));
-                write(fp, gfx_mem[i].mem, gfx_mem[i].size);
+                write(fd, &b, 1);
+                write(fd, &gfx_mem[i].mem, 2);  // Write the memory location
+                write(fd, &gfx_mem[i].size, sizeof(unsigned));
+                write(fd, gfx_mem[i].mem, gfx_mem[i].size);
             }
             else
                 break;
@@ -89,7 +91,7 @@ void save_file(const char filename[],
         }
 
         //
-        close(fp);
+        close(fd);
     }
 }
 
@@ -100,79 +102,106 @@ byte load_file(const char filename[],
                struct mem_store gfx_mem[MAX_N_MEM],
                byte set_graphics_mode)
 {
-    int fp = open(filename, O_RDONLY);
+    int fd = open(filename, O_RDONLY);
 
-    if(fp >= 0)
+    if(fd >= 0)
     {
-        byte i = 0;
-        byte n = 0, maj = 0, min = 0, bld = 0;
-
-        // Read the version #
-        n = read(fp, (void*)&maj, 1);
-        n = read(fp, (void*)&min, 1);
-        n = read(fp, (void*)&bld, 1);
-
-        // Read the graphics mode
-        n = read(fp, (void*)gfx_mode, 1);
-        if(set_graphics_mode)
-            set_graphics(*gfx_mode);
-
-        #ifdef DEBUG_FILELOAD
-        gotoxy(0,0);
-        cputs("Read the graphics mode\n\r");
-        #endif
-
-        // Read the DLs
-        while(n > 0)
+        byte file_type = image_file_type(filename);
+        switch(file_type)
         {
-            // Read the type token
-            byte type;
-            unsigned mem_loc;
-            unsigned size;
-
-            n = read(fp, (void*)&type, 1);
-            if(n < 1)
-                break;
-            #ifdef DEBUG_FILELOAD
-            cprintf("Read the type %d\n\r", type);
-            #endif
-            n = read(fp, &mem_loc, 2);
-            if(n < 1)
-                break;
-            #ifdef DEBUG_FILELOAD
-            cprintf("Read the mem location %02X\n\r", mem_loc);
-            #endif
-            n = read(fp, &size, 2);
-            if(n < 1)
-                break;
-            #ifdef DEBUG_FILELOAD
-            cprintf("Read the size %d\n\r", size);
-            #endif
-            n = read(fp, (void*)mem_loc, size);
-            if(n < 1)
-                break;
-            #ifdef DEBUG_FILELOAD
-            cprintf("Read the data %d\n\r", n);
-            #endif
-
-            switch(type)
+            case FILETYPE_YAI:
             {
-                case DL_TOKEN:
-                    dl_mem[i].size = size;
-                    dl_mem[i].mem = (void*)mem_loc;
-                    break;
-                case DLI_TOKEN:
-                    dli_mem[i].size = size;
-                    dli_mem[i].mem = (void*)mem_loc;
-                    break;
-                case MEM_TOKEN:
-                    gfx_mem[i].size = size;
-                    gfx_mem[i].mem = (void*)mem_loc;
-                    break;
+                byte i = 0;
+                byte n = 0, maj = 0, min = 0, bld = 0;
+
+                // Read the version #
+                n = read(fd, (void*)&maj, 1);
+                n = read(fd, (void*)&min, 1);
+                n = read(fd, (void*)&bld, 1);
+
+                // Read the graphics mode
+                n = read(fd, (void*)gfx_mode, 1);
+                if(set_graphics_mode)
+                    set_graphics(*gfx_mode);
+
+                #ifdef DEBUG_FILELOAD
+                gotoxy(0,0);
+                cputs("Read the graphics mode\n\r");
+                #endif
+
+                // Read the DLs
+                while(n > 0)
+                {
+                    // Read the type token
+                    byte type;
+                    unsigned mem_loc;
+                    unsigned size;
+
+                    n = read(fd, (void*)&type, 1);
+                    if(n < 1)
+                        break;
+                    #ifdef DEBUG_FILELOAD
+                    cprintf("Read the type %d\n\r", type);
+                    #endif
+                    n = read(fd, &mem_loc, 2);
+                    if(n < 1)
+                        break;
+                    #ifdef DEBUG_FILELOAD
+                    cprintf("Read the mem location %02X\n\r", mem_loc);
+                    #endif
+                    n = read(fd, &size, 2);
+                    if(n < 1)
+                        break;
+                    #ifdef DEBUG_FILELOAD
+                    cprintf("Read the size %d\n\r", size);
+                    #endif
+                    n = read(fd, (void*)mem_loc, size);
+                    if(n < 1)
+                        break;
+                    #ifdef DEBUG_FILELOAD
+                    cprintf("Read the data %d\n\r", n);
+                    #endif
+
+                    switch(type)
+                    {
+                        case DL_TOKEN:
+                            dl_mem[i].size = size;
+                            dl_mem[i].mem = (void*)mem_loc;
+                            break;
+                        case DLI_TOKEN:
+                            dli_mem[i].size = size;
+                            dli_mem[i].mem = (void*)mem_loc;
+                            break;
+                        case MEM_TOKEN:
+                            gfx_mem[i].size = size;
+                            gfx_mem[i].mem = (void*)mem_loc;
+                            break;
+                    }
+                } // while n
             }
+            break;
+            
+            case FILETYPE_PBM:
+            case FILETYPE_PGM:
+                reset_console();   // clear the console mem
+                disable_console(); // disable the console (Gf9 DLI doesn't like file loads)
+                graphics_clear();
+
+                switch(file_type)
+                {
+                    case FILETYPE_PBM:
+                        set_graphics(GRAPHICS_8);
+                        readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
+                        break;
+                    case FILETYPE_PGM:
+                        set_graphics(GRAPHICS_9);
+                        readPGMIntoGfx9(fd, (void*)MY_SCRN_MEM_TEMP, (void*)MY_SCRN_MEM);
+                        break;
+                };
+            break; 
         }
 
-        close(fp);
+        close(fd);
     }
     else
         cprintf("ERROR: Problem opening file %s", filename);
