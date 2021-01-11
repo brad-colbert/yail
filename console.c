@@ -3,6 +3,7 @@
 #include "readNetPBM.h"
 #include "graphics.h"
 #include "console.h"
+#include "files.h"
 #include "consts.h"
 #include "types.h"
 
@@ -19,6 +20,7 @@
 // Externs
 extern byte GRAPHICS_MODE;
 extern byte IMAGE_FILE_TYPE;
+extern struct dl_store image_dl_store;
 
 // Globals
 byte console_state = CONSOLE_HIDDEN;
@@ -157,6 +159,17 @@ void process_command(byte ntokens)
                 case '9':
                     set_graphics(GRAPHICS_9);
                     break;
+
+                case '1':
+                    switch(tokens[1][1])
+                    {   case '0':
+                            set_graphics(GRAPHICS_10);
+                            break;
+                        case '1':
+                            set_graphics(GRAPHICS_11);
+                            break;
+                    }
+                    break;
             }
         }
     }
@@ -170,38 +183,84 @@ void process_command(byte ntokens)
     {
         if(ntokens > 1)
         {
+            byte IMAGE_FILE_TYPE = 0;
             fix_chars(tokens[1]);
-            image_file_type(tokens[1]);
+            IMAGE_FILE_TYPE = image_file_type(tokens[1]);
             if(IMAGE_FILE_TYPE)
             {
-                int fd = open(tokens[1], O_RDONLY);//tokens[1], O_RDONLY);
-                if(fd >= 0)
+                if(IMAGE_FILE_TYPE == FILETYPE_YAI)
                 {
-                    reset_console();   // clear the console mem
-                    disable_console(); // disable the console (Gf9 DLI doesn't like file loads)
-
-                    if(IMAGE_FILE_TYPE)
-                        graphics_clear();
-
-                    switch(IMAGE_FILE_TYPE)
+                    struct dl_store dl_mem[MAX_N_DL];
+                    struct dli_store dli_mem[MAX_N_DLI];
+                    struct mem_store gfx_mem[MAX_N_MEM];
+                    load_file(tokens[1], &GRAPHICS_MODE, dl_mem, dli_mem, gfx_mem, 1);
+                }
+                else
+                {
+                    int fd = open(tokens[1], O_RDONLY);
+                    if(fd >= 0)
                     {
-                        case FILETYPE_PBM:
-                            set_graphics(GRAPHICS_8);
-                            readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
-                            break;
-                        case FILETYPE_PGM:
-                            set_graphics(GRAPHICS_9);
-                            readPGMIntoGfx9(fd, (void*)MY_SCRN_MEM_TEMP, (void*)MY_SCRN_MEM);
-                            break;
-                    };
-                    close(fd);
+                        reset_console();   // clear the console mem
+                        disable_console(); // disable the console (Gf9 DLI doesn't like file loads)
+
+                        if(IMAGE_FILE_TYPE)
+                            graphics_clear();
+
+                        switch(IMAGE_FILE_TYPE)
+                        {
+                            case FILETYPE_PBM:
+                                set_graphics(GRAPHICS_8);
+                                readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
+                                break;
+                            case FILETYPE_PGM:
+                                set_graphics(GRAPHICS_9);
+                                readPGMIntoGfx9(fd, (void*)MY_SCRN_MEM_TEMP, (void*)MY_SCRN_MEM);
+                                break;
+                        };
+                        close(fd);
+                    }
                 }
             }
             else
             {
                 gotoxy(0,0);
-                cprintf(" ERROR: not filetype");
+                cprintf("ERROR: not filetype");
             }
+        }
+        else
+        {
+            gotoxy(0,0);
+            cprintf("ERROR: File not specified");
+        }
+    }
+
+    if(strncmp(tokens[0], "save", 4) == 0)
+    {
+        if(ntokens > 1)
+        {
+            struct dl_store dl_mem[MAX_N_DL];
+            struct dli_store dli_mem[MAX_N_DLI];
+            struct mem_store gfx_mem[MAX_N_MEM];
+
+            memset(&dl_mem, 0, sizeof(dl_mem));
+            memset(&dli_mem, 0, sizeof(dli_mem));
+            memset(&gfx_mem, 0, sizeof(gfx_mem));
+
+            // Define the DL description
+            dl_mem[0] = image_dl_store;
+
+            // Define the DLI description
+
+            // Define the MEM descriptions
+            gfx_mem[0].size = 0x2800;
+            gfx_mem[0].mem = 0x8000;
+
+            save_file(tokens[1], dl_mem, dli_mem, gfx_mem);
+        }
+        else
+        {
+            gotoxy(0,0);
+            cprintf("ERROR: File not specified");
         }
     }
 }

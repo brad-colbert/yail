@@ -3,6 +3,7 @@
 #include "displaylist.h"
 
 #include <atari.h>
+#include <conio.h>
 
 #include <stdio.h>
 #include <string.h>
@@ -11,7 +12,7 @@
 // dl_location - location in memory for the DL
 // dl_def[]    - an array of dl_defs that are used to define the modes
 // n           - the number of dl_def entries
-unsigned makeDisplayList(void* dl_location, struct dl_def dl[], byte n)
+unsigned makeDisplayList(void* dl_location, struct dl_def dl[], byte n, struct dl_store* dls)
 {
     byte* dl_mem = dl_location;
     int idx;
@@ -61,7 +62,10 @@ unsigned makeDisplayList(void* dl_location, struct dl_def dl[], byte n)
     *(dl_mem++) = DL_JVB;
     *(((unsigned*)dl_mem)++) = (unsigned)dl_location;
 
-    return (unsigned)(dl_mem - (byte*)dl_location);
+    dls->size = (unsigned)(dl_mem - (byte*)dl_location);
+    dls->mem = dl_location;
+
+    return dls->size;
 }
 
 // Shows the contents of a display list.

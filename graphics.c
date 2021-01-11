@@ -3,6 +3,7 @@
 #include "graphics.h"
 #include "console.h"
 #include "displaylist.h"
+#include "files.h"
 #include "consts.h"
 #include "types.h"
 
@@ -23,6 +24,7 @@ byte GRAPHICS_MODE = 0x00;
 //unsigned CONSOLE_MEM = 0xFFFF;
 
 // Display list definitions
+struct dl_store image_dl_store = { 0, IML_DL };
 struct dl_def image_dl[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
                              {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
                              {0, DL_MAP320x1x1, 16, 0, MY_SCRN_MEM_C}
@@ -128,12 +130,12 @@ void set_graphics(byte mode)
                 POKE(GPRIOR, ORG_GPRIOR);     // Turn off GTIA
                 POKE(NMIEN, NMI_STATE);       // Disable the NMI for DLIs'
                 POKEW(VDSLST, VDSLIST_STATE); // Clear the DLI pointer
-                makeDisplayList((void*)IML_DL, command_dl_g8, 4);
+                makeDisplayList((void*)IML_DL, command_dl_g8, 4, &image_dl_store);
                 POKE(COLOR2, 0);   // Background black
                 POKE(COLOR1, 14);  // Color maximum luminance
             break;
             case GRAPHICS_9:
-                makeDisplayList((void*)IML_DL, command_dl_g9, 5);
+                makeDisplayList((void*)IML_DL, command_dl_g9, 5, &image_dl_store);
                 POKE(COLOR2, 0);                        // Turn the console black
                 POKE(GPRIOR, ORG_GPRIOR | GFX_9);       // Enable GTIA   
                 POKEW(VDSLST, (unsigned)disable_9_dli); // Set the address to our DLI that disables GTIA for the console
@@ -155,10 +157,8 @@ void set_graphics(byte mode)
                 POKEW(SDLSTL, ORG_DLIST);
                 POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
             break;
-            case GRAPHICS_8:
-                POKE(GPRIOR, ORG_GPRIOR);     // Turn off GTIA
-            case GRAPHICS_9:
-                makeDisplayList((void*)IML_DL, image_dl, 3);
+            default:
+                makeDisplayList((void*)IML_DL, image_dl, 3, &image_dl_store);
             break;
         }
 
@@ -168,9 +168,16 @@ void set_graphics(byte mode)
             case GRAPHICS_8:
                 POKE(COLOR2, 0);   // Background black
                 POKE(COLOR1, 14);  // Color maximum luminance
+                POKE(GPRIOR, ORG_GPRIOR);     // Turn off GTIA
             break;
             case GRAPHICS_9:
                 POKE(GPRIOR, ORG_GPRIOR | GFX_9);   // Enable GTIA   
+            break;
+            case GRAPHICS_10:
+                POKE(GPRIOR, ORG_GPRIOR | GFX_10);   // Enable GTIA   
+            break;
+            case GRAPHICS_11:
+                POKE(GPRIOR, ORG_GPRIOR | GFX_11);   // Enable GTIA   
             break;
         }
     }

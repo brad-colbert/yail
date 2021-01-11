@@ -3,6 +3,7 @@
 #ifndef DISPLAY_LIST_H
 #define DISPLAY_LIST_H
 
+#include "files.h"
 #include "types.h"
 
 // A simple structure for defining a display list in a code compact way
@@ -19,7 +20,7 @@ struct dl_def
 // dl_location - location in memory for the DL
 // dl_def[]    - an array of dl_defs that are used to define the modes
 // n           - the number of dl_def entries
-unsigned makeDisplayList(void* dl_location, struct dl_def dl[], byte n);
+unsigned makeDisplayList(void* dl_location, struct dl_def dl[], byte n, struct dl_store* dls);
 
 // Shows the contents of a display list.
 // name - simply used in the output header so you can tell which DL is which on the console.

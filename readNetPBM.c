@@ -176,39 +176,3 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
         (byte*)dmem += numread/2;
     }
 }
-
-void image_file_type(char* filename)
-{
-    byte len = strlen(filename);
-    IMAGE_FILE_TYPE = 0;
-
-    if(len > 4)  // ext plus .
-    {
-        char* ext = 0x0;
-        int i;
-
-        // try to get the extension
-        for(i = 0; i < len; ++i)
-        {
-            if((filename[i] == 0x0E) || (filename[i] == 0x2E))
-            {
-                if((len - (i+1)) > 2)
-                {
-                    ext = filename + i + 1;
-                    break;
-                }
-            }
-        }
-
-        if(ext)
-        {
-            if(ext[0] == 'p')
-            {
-                if(ext[1] == 'b')
-                    IMAGE_FILE_TYPE = FILETYPE_PBM;
-                if(ext[1] == 'g')
-                    IMAGE_FILE_TYPE = FILETYPE_PGM;                
-            }
-        }
-    }
-}
