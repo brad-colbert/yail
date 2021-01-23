@@ -24,8 +24,6 @@ ifdef CC65_TARGET
 CC      = cl65
 CFLAGS  = -t $(CC65_TARGET) --create-dep $(<:.c=.d) -O
 LDFLAGS = -t $(CC65_TARGET) -C imgload.cfg -m $(PROGRAM).map 
-#LDFLAGS = -t $(CC65_TARGET) -Wl -D__SYSTEM_CHECK__=0 -m $(PROGRAM).map --start-addr $3600
-#LDFLAGS = -t $(CC65_TARGET) -m $(PROGRAM).map
 else
 CC      = gcc
 CFLAGS  = -MMD -MP -O
