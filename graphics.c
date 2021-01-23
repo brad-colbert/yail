@@ -12,6 +12,7 @@
 #include <peekpoke.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 // Globals (private)
 unsigned ORG_DLIST = 0;
@@ -24,7 +25,7 @@ byte GRAPHICS_MODE = 0x00;
 //unsigned CONSOLE_MEM = 0xFFFF;
 
 // Display list definitions
-struct dl_store image_dl_store = { 0, IML_DL };
+struct dl_store image_dl_store = { 0, 0 };
 struct dl_def image_dl[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
                              {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
                              {0, DL_MAP320x1x1, 16, 0, MY_SCRN_MEM_C}
@@ -113,6 +114,11 @@ void graphics_clear()
 
 void set_graphics(byte mode)
 {
+    // Allocate the memory for the DL
+    if(image_dl_store.mem)
+        free(image_dl_store.mem);
+    image_dl_store.mem = malloc(1024);
+
     // Turn off ANTIC while we muck with the DL
     POKE(SDMCTL, 0);
 
@@ -130,12 +136,12 @@ void set_graphics(byte mode)
                 POKE(GPRIOR, ORG_GPRIOR);     // Turn off GTIA
                 POKE(NMIEN, NMI_STATE);       // Disable the NMI for DLIs'
                 POKEW(VDSLST, VDSLIST_STATE); // Clear the DLI pointer
-                makeDisplayList((void*)IML_DL, command_dl_g8, 4, &image_dl_store);
+                makeDisplayList(image_dl_store.mem, command_dl_g8, 4, &image_dl_store);
                 POKE(COLOR2, 0);   // Background black
                 POKE(COLOR1, 14);  // Color maximum luminance
             break;
             case GRAPHICS_9:
-                makeDisplayList((void*)IML_DL, command_dl_g9, 5, &image_dl_store);
+                makeDisplayList(image_dl_store.mem, command_dl_g9, 5, &image_dl_store);
                 POKE(COLOR2, 0);                        // Turn the console black
                 POKE(GPRIOR, ORG_GPRIOR | GFX_9);       // Enable GTIA   
                 POKEW(VDSLST, (unsigned)disable_9_dli); // Set the address to our DLI that disables GTIA for the console
@@ -158,7 +164,7 @@ void set_graphics(byte mode)
                 POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
             break;
             default:
-                makeDisplayList((void*)IML_DL, image_dl, 3, &image_dl_store);
+                makeDisplayList(image_dl_store.mem, image_dl, 3, &image_dl_store);
             break;
         }
 
@@ -186,7 +192,7 @@ void set_graphics(byte mode)
     {
         case GRAPHICS_8:
         case GRAPHICS_9:
-            POKEW(SDLSTL, IML_DL);            // Tell ANTIC the address of our display list (use it)
+            POKEW(SDLSTL, image_dl_store.mem);            // Tell ANTIC the address of our display list (use it)
     }
 
     // Turn ANTIC back on

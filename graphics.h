@@ -15,9 +15,6 @@
 #define GRAPHICS_8_CONSOLE GRAPHICS_8 | GRAPHICS_CONSOLE_EN
 #define GRAPHICS_9_CONSOLE GRAPHICS_9 | GRAPHICS_CONSOLE_EN
 
-// Display lists memory locations
-#define IML_DL 0x7C00  // provides 1K before bumping into video memory
-
 // Screen memory location (high resolution spaces 3 4K segments)
 #define MY_SCRN_MEM 0x8000 // 1024 byte aligned
 #define MY_SCRN_MEM_B 0x9000
