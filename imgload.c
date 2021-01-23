@@ -3,11 +3,20 @@
 #include "console.h"
 #include "graphics.h"
 
+#include <atari.h>
 #include <conio.h>
+#include <peekpoke.h>
 
 //
 int main()
 {
+    /*
+    unsigned int memlo = PEEKW(743);
+    cprintf("%04X\r\n", memlo);
+    cgetc();
+    return 0;
+    */
+
     // Clear the text and memory
     enable_console();
     cursor(1);

@@ -124,6 +124,7 @@ void process_command(byte ntokens)
         "cls  - Clear the image display\n\r"
         "gfx  - [0,8,9] Set the graphics mode\n\r"
         "load - [filename] Load and display file\n\r"
+        "save - [filename] Save memory to YAI file\n\r"
         "\n\r"
         "Any key to continue...\n\r";
 
