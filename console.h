@@ -11,5 +11,6 @@ void enable_console(void);
 void disable_console(void);
 void console_update(void);
 void reset_console(void);
+void fix_chars(char*);
 
 #endif // CONSOLE_H

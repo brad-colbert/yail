@@ -217,7 +217,7 @@ void process_command(byte ntokens)
 
             // Define the MEM descriptions
             gfx_mem[0].size = 0x2800;
-            gfx_mem[0].mem = 0x8000;
+            gfx_mem[0].mem = (void*)MY_SCRN_MEM;
 
             save_file(tokens[1], dl_mem, dli_mem, gfx_mem);
         }

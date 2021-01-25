@@ -12,6 +12,9 @@
 #include <stdio.h>
 #include <fcntl.h>
 
+// Defines
+#define BYTES_PER_LINE 40
+
 // Globals
 byte IMAGE_FILE_TYPE = 0;
 
@@ -111,22 +114,28 @@ int readHeader(int fd)
 
 // Reads a file from fb and writes numbytes of it into dmem.
 // Assumes destination will be Gfx8 formatted
-void readPBMIntoGfx8(int fd, void* dmem)
+void readPBMIntoGfx8(int fd, byte* dmem)
 {
-    const unsigned MAX_SIZE = 40 * 102; // Max size of blocks (4080 bytes)
+    const unsigned MAX_SIZE = BYTES_PER_LINE * 102; // Max size of blocks (4080 bytes)
     unsigned numbytes = 0;
     unsigned numread = 0;
-    
+
+    //memset(dmem, 0x55, 8800 + 32);//+0x0400);
+    //cgetc();
+
     readHeader(fd);
 
     numbytes = (w / 8) * h;
+
+    //cprintf("%d\n\r", numbytes);
+    //cgetc();
 
     // Have to divide the reads so they are on 4K bounderies
     while(numbytes)
     {
         numread = numbytes > MAX_SIZE ? MAX_SIZE : numbytes;
         read(fd, dmem, numread);
-        (byte*)dmem += 0x1000; // Move to the next 4K block.
+        dmem += 0x1000; // Move to the next 4K block.
 
         numbytes -= numread;
     }
@@ -134,10 +143,10 @@ void readPBMIntoGfx8(int fd, void* dmem)
 
 // Reads a file from fb and writes numbytes of it into dmem.
 // Assumes destination will be Gfx9 formatted
-void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
+void readPGMIntoGfx9(int fd, byte* tmem, byte* dmem)
 {
-    const unsigned TMAX_SIZE = 80 * 34; // Max size of temp buffer (2720 bytes) about 2/3rds
-    void* next_dmem = (byte*)dmem + 0x1000;
+    const unsigned TMAX_SIZE = BYTES_PER_LINE * 68; // Max size of temp buffer (2560 bytes) about 2/3rds
+    byte* next_dmem = (byte*)dmem + 0x1000;
     unsigned numread, i;
     unsigned numbytes = 0;
 
@@ -155,7 +164,6 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
         {
             unsigned digit = (unsigned)(buff[i] - ASC_0);
             mxp += pow10(digit, (unsigned)dc);
-            // printf("%d, %d: %02x %d %d\n", i, dc, buff[i], digit, *v);
             dc++;
         } 
     }
@@ -163,16 +171,21 @@ void readPGMIntoGfx9(int fd, void* tmem, void* dmem)
     while(numread = read(fd, tmem, TMAX_SIZE))
     {
         // Check if we moved passed the next memory block.  If so, switch to it.
-        if((byte*)dmem + numread/2 > next_dmem)
+        if((byte*)dmem + numread/2 > next_dmem)  // half because there are 4 bits per pixel.  Each byte is two pixels in Gr9
         {
             dmem = next_dmem;
-            (byte*)next_dmem += 0x1000;
+            next_dmem += 0x1000;
         }
+        /*
+        unsigned remaining = 
+        if(!((dmem + (numread/2)) % 0x1000))
+            dmem
+        */
 
         // Process
         for(i = 0; i < numread/2; i++)
             ((byte*)dmem)[i] |= (( ((byte*)tmem)[i*2] & 0xF0) | (( ((byte*)tmem)[i*2+1] & 0xF0) >> 4));
 
-        (byte*)dmem += numread/2;
+        dmem += numread/2;
     }
 }

@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <string.h>
+#include <ctype.h> 
 
 // Externs
 extern byte GRAPHICS_MODE;
@@ -103,10 +104,12 @@ byte load_file(const char filename[],
                byte set_graphics_mode)
 {
     int fd = open(filename, O_RDONLY);
-
     if(fd >= 0)
     {
         byte file_type = image_file_type(filename);
+
+        cprintf("Loading... %s", filename);
+
         switch(file_type)
         {
             case FILETYPE_YAI:
@@ -190,8 +193,9 @@ byte load_file(const char filename[],
                 switch(file_type)
                 {
                     case FILETYPE_PBM:
-                        set_graphics(GRAPHICS_8);
+                        //set_graphics(GRAPHICS_8);
                         readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
+                        set_graphics(GRAPHICS_8);
                         break;
                     case FILETYPE_PGM:
                         set_graphics(GRAPHICS_9);
@@ -233,15 +237,15 @@ byte image_file_type(const char filename[])
 
         if(ext)
         {
-            if(ext[0] == 'p')
+            if(toupper(ext[0]) == 'P')
             {
-                if(ext[1] == 'b')
+                if(toupper(ext[1]) == 'B')
                     return FILETYPE_PBM;
-                if(ext[1] == 'g')
+                if(toupper(ext[1]) == 'G')
                     return FILETYPE_PGM;                
             }
-            else if(ext[0] == 'y')
-                if(ext[1] == 'a')
+            else if(toupper(ext[0]) == 'Y')
+                if(toupper(ext[1]) == 'A')
                     return FILETYPE_YAI;
         }
     }

@@ -6,6 +6,7 @@
 #include "files.h"
 #include "consts.h"
 #include "types.h"
+#include "utility.h"
 
 #include <conio.h>
 #include <atari.h>
@@ -26,21 +27,21 @@ byte GRAPHICS_MODE = 0x00;
 
 // Display list definitions
 struct dl_store image_dl_store = { 0, 0 };
-struct dl_def image_dl[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
-                             {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
-                             {0, DL_MAP320x1x1, 16, 0, MY_SCRN_MEM_C}
-                            };
-struct dl_def command_dl_g8[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
-                                  {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
-                                  {0, DL_MAP320x1x1, 8, 0, MY_SCRN_MEM_C},
-                                  {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
-                                };
-struct dl_def command_dl_g9[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
-                                  {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
-                                  {0, DL_MAP320x1x1, 7, 0, MY_SCRN_MEM_C},
-                                  {0, DL_MAP320x1x1, 1, 1, 0x0},
-                                  {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM}
-                                };
+dl_def image_dl[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
+                      {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
+                      {0, DL_MAP320x1x1, 16, 0, MY_SCRN_MEM_C}
+                    };
+dl_def command_dl_g8[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
+                           {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
+                           {0, DL_MAP320x1x1, 8, 0, MY_SCRN_MEM_C},
+                           {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+                         };
+dl_def command_dl_g9[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
+                           {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
+                           {0, DL_MAP320x1x1, 7, 0, MY_SCRN_MEM_C},
+                           {0, DL_MAP320x1x1, 1, 1, 0x0},
+                           {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM}
+                         };
 
 // Externals
 extern byte console_state;
@@ -117,7 +118,7 @@ void set_graphics(byte mode)
     // Allocate the memory for the DL
     if(image_dl_store.mem)
         free(image_dl_store.mem);
-    image_dl_store.mem = malloc(1024);
+    image_dl_store.mem = malloc_constrianed(1024, 1024);
 
     // Turn off ANTIC while we muck with the DL
     POKE(SDMCTL, 0);
@@ -192,7 +193,7 @@ void set_graphics(byte mode)
     {
         case GRAPHICS_8:
         case GRAPHICS_9:
-            POKEW(SDLSTL, image_dl_store.mem);            // Tell ANTIC the address of our display list (use it)
+            POKEW(SDLSTL, (unsigned)image_dl_store.mem);            // Tell ANTIC the address of our display list (use it)
     }
 
     // Turn ANTIC back on
