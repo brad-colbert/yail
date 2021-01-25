@@ -27,21 +27,25 @@ byte GRAPHICS_MODE = 0x00;
 
 // Display list definitions
 struct dl_store image_dl_store = { 0, 0 };
-dl_def image_dl[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
-                      {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
-                      {0, DL_MAP320x1x1, 16, 0, MY_SCRN_MEM_C}
-                    };
-dl_def command_dl_g8[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
-                           {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
-                           {0, DL_MAP320x1x1, 8, 0, MY_SCRN_MEM_C},
-                           {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
-                         };
-dl_def command_dl_g9[] = { {8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
-                           {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
-                           {0, DL_MAP320x1x1, 7, 0, MY_SCRN_MEM_C},
-                           {0, DL_MAP320x1x1, 1, 1, 0x0},
-                           {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM}
-                         };
+// dl_def image_dl[] = { /*{8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
+//                       {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
+//                       {0, DL_MAP320x1x1, 16, 0, MY_SCRN_MEM_C}*/
+//                       {8, DL_MAP320x1x1, 220, 0, MY_SCRN_MEM}
+//                     };
+// dl_def_parray image_dl;
+// dl_def command_dl_g8[] = { /*{8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
+//                            {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
+//                            {0, DL_MAP320x1x1, 8, 0, MY_SCRN_MEM_C},*/
+//                            {8, DL_MAP320x1x1, 212, 0, MY_SCRN_MEM},
+//                            {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+//                          };
+// dl_def command_dl_g9[] = { /*{8, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM},
+//                            {0, DL_MAP320x1x1, 102, 0, MY_SCRN_MEM_B},
+//                            {0, DL_MAP320x1x1, 7, 0, MY_SCRN_MEM_C},*/
+//                            {8, DL_MAP320x1x1, 211, 0, MY_SCRN_MEM},
+//                            {0, DL_MAP320x1x1, 1, 1, 0x0},
+//                            {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM}
+//                          };
 
 // Externals
 extern byte console_state;
@@ -134,19 +138,32 @@ void set_graphics(byte mode)
                 POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
             break;
             case GRAPHICS_8:
+            {
+                dl_def command_dl_g8[] = { {8, DL_MAP320x1x1, 212, 0, MY_SCRN_MEM},
+                                           {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+                                         };
+
                 POKE(GPRIOR, ORG_GPRIOR);     // Turn off GTIA
                 POKE(NMIEN, NMI_STATE);       // Disable the NMI for DLIs'
                 POKEW(VDSLST, VDSLIST_STATE); // Clear the DLI pointer
-                makeDisplayList(image_dl_store.mem, command_dl_g8, 4, &image_dl_store);
+                makeDisplayList(image_dl_store.mem, command_dl_g8, 2, &image_dl_store);
                 POKE(COLOR2, 0);   // Background black
                 POKE(COLOR1, 14);  // Color maximum luminance
+            }
             break;
             case GRAPHICS_9:
-                makeDisplayList(image_dl_store.mem, command_dl_g9, 5, &image_dl_store);
+            {
+                dl_def command_dl_g9[] = { {8, DL_MAP320x1x1, 211, 0, MY_SCRN_MEM},
+                                           {0, DL_MAP320x1x1, 1, 1, 0x0},
+                                           {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM}
+                                         };
+
+                makeDisplayList(image_dl_store.mem, command_dl_g9, 3, &image_dl_store);
                 POKE(COLOR2, 0);                        // Turn the console black
                 POKE(GPRIOR, ORG_GPRIOR | GFX_9);       // Enable GTIA   
                 POKEW(VDSLST, (unsigned)disable_9_dli); // Set the address to our DLI that disables GTIA for the console
                 POKE(NMIEN, NMI_STATE | 192);           // Enable NMI
+            }
             break;
         }
     }
@@ -165,7 +182,12 @@ void set_graphics(byte mode)
                 POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
             break;
             default:
-                makeDisplayList(image_dl_store.mem, image_dl, 3, &image_dl_store);
+            {
+                dl_def image_dl[] = { {8, DL_MAP320x1x1, 220, 0, MY_SCRN_MEM}
+                                    };
+
+                makeDisplayList(image_dl_store.mem, image_dl, 1, &image_dl_store);
+            }
             break;
         }
 

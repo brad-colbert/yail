@@ -139,49 +139,59 @@ unsigned makeDisplayList(void* dl_location, dl_def dl[], byte n, struct dl_store
     int idx;
 
     //cprintf("DL = %p\n\r", dl_location);
+    //cgetc();
 
     // Set new DL
     for(idx = 0; idx < n; idx++)
     {
-        int jdx;
-        dl_def* entry = &dl[idx];
+        int jdx, kdx =0;
+        dl_def_parray dl_expanded = expandDisplayList(&dl[idx]);
+        dl_def* entry = dl_expanded[kdx];
 
-        // Handle blanks, should calculate how many... just using base 8 for now
-        for(jdx = 0; jdx < entry->blank_lines/8; jdx++)
-            *(dl_mem++) = (byte)DL_BLK8;
-
-        // Handle mode.
-        for(jdx = 0; jdx < entry->lines; jdx++)
+        while(entry)
         {
-            if(jdx) // Following line after inital definition which may reference memory
-            {
-                if(entry->dli)
-                    *(dl_mem++) = DL_DLI(entry->mode);  // DLI flag triggered so generate
-                else
-                    *(dl_mem++) = (byte)entry->mode;
-            }
-            else   // Initial line, may define an LMS
-            {
-                if(entry->address)  // Screen memory defined, add address following
-                {
-                    if(entry->dli)
-                        *(dl_mem++) = DL_DLI(DL_LMS(entry->mode));  // DLI flag triggered so generate
-                    else
-                        *(dl_mem++) = DL_LMS(entry->mode);
+            // Handle blanks, should calculate how many... just using base 8 for now
+            for(jdx = 0; jdx < entry->blank_lines/8; jdx++)
+                *(dl_mem++) = (byte)DL_BLK8;
 
-                    *((unsigned*)dl_mem) = entry->address;  // Add the address
-
-                    dl_mem+=2;
-                }
-                else
+            // Handle mode.
+            for(jdx = 0; jdx < entry->lines; jdx++)
+            {
+                if(jdx) // Following line after inital definition which may reference memory
                 {
                     if(entry->dli)
                         *(dl_mem++) = DL_DLI(entry->mode);  // DLI flag triggered so generate
                     else
-                        *(dl_mem++) = (byte)entry->mode;  // Just a plain ol' mode line
+                        *(dl_mem++) = (byte)entry->mode;
+                }
+                else   // Initial line, may define an LMS
+                {
+                    if(entry->address)  // Screen memory defined, add address following
+                    {
+                        if(entry->dli)
+                            *(dl_mem++) = DL_DLI(DL_LMS(entry->mode));  // DLI flag triggered so generate
+                        else
+                            *(dl_mem++) = DL_LMS(entry->mode);
+
+                        *((unsigned*)dl_mem) = entry->address;  // Add the address
+
+                        dl_mem+=2;
+                    }
+                    else
+                    {
+                        if(entry->dli)
+                            *(dl_mem++) = DL_DLI(entry->mode);  // DLI flag triggered so generate
+                        else
+                            *(dl_mem++) = (byte)entry->mode;  // Just a plain ol' mode line
+                    }
                 }
             }
-        }
+
+            ++kdx;
+            entry = dl_expanded[kdx];
+        } // while entry
+
+        cleanupDL_Def_PArray(dl_expanded);
     }
 
     // Finish up and add jump line

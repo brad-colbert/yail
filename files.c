@@ -73,7 +73,7 @@ void save_file(const char filename[],
             ++i;
         }
 
-        // Write the DLs
+        // Write the image
         i = 0;
         while(i < MAX_N_MEM)
         {

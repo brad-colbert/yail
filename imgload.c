@@ -18,27 +18,33 @@ extern byte GRAPHICS_MODE;
 //
 int main(int argc, char* argv[])
 {
-    //dl_def dl = {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM};
-    dl_def dl = {8, DL_MAP320x1x1, 220, 0, MY_SCRN_MEM};
-    dl_def_parray dlist = 0x0;
-    dl_def* dlist_ptr = 0x0;
-    byte i = 0;
+    // //dl_def dl = {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM};
+    // dl_def dl = {8, DL_MAP320x1x1, 220, 0, MY_SCRN_MEM};
+    // dl_def_parray dlist = 0x0;
+    // dl_def* dlist_ptr = 0x0;
+    // byte i = 0;
 
-    reset_console();
+    // reset_console();
 
-    dlist = expandDisplayList(&dl);
-    dlist_ptr = dlist[0];
+    // dlist = expandDisplayList(&dl);
+    // dlist_ptr = dlist[0];
 
-    while(dlist_ptr)
-    {
-        cprintf("%d: %d, %d, %d, %d, %02X\n\r", i, dlist_ptr->blank_lines, dlist_ptr->mode, dlist_ptr->lines, dlist_ptr->dli, dlist_ptr->address);
-        ++i;
-        dlist_ptr = dlist[i];
-    }
+    // while(dlist_ptr)
+    // {
+    //     cprintf("%d: %d, %d, %d, %d, %02X\n\r", i, dlist_ptr->blank_lines, dlist_ptr->mode, dlist_ptr->lines, dlist_ptr->dli, dlist_ptr->address);
+    //     ++i;
+    //     dlist_ptr = dlist[i];
+    // }
 
-    cleanupDL_Def_PArray(dlist);
-    
-    cgetc();
+    // cleanupDL_Def_PArray(dlist);
+    // struct dl_store image_dl_store = { 0, 0 };
+    // dl_def dl[] = { {8, DL_MAP320x1x1, 211, 0, MY_SCRN_MEM},
+    //                 {0, DL_MAP320x1x1, 1, 1, 0x0},
+    //                 {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM}
+    //               };
+    // makeDisplayList(0xA000, dl, 3, &image_dl_store);
+    // print_dlist("DL", image_dl_store.mem);
+    // cgetc();
 
 
     #if 0
