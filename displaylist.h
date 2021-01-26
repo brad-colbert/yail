@@ -5,26 +5,15 @@
 
 #include "files.h"
 #include "types.h"
-
-// A simple structure for defining a display list in a code compact way
-typedef struct _dl_def
-{
-    byte blank_lines;
-    byte mode;        // From the Antic modes
-    byte lines;       // # of lines of the mode
-    byte dli;         // Switch for DLI
-    unsigned address; // Address of screen memory for mode, 0x0000 if use SAVMSC + offset
-} dl_def;
-
-typedef dl_def** dl_def_parray;
+#include "graphics.h"
 
 // Inspects a dl_def and determines if the memory use crosses 4K boundaries.
 // If it does, it breaks the definition up, creating new entries at the 4K
 // boundaries.
-dl_def_parray expandDisplayList(dl_def* dl);
+dl_def_parray expandDisplayList(DLDef* dl);
 
 // Free's all of the memory used by the array.
-void cleanupDL_Def_PArray(dl_def_parray parray);
+void cleanupDL_Def_PArray(DLDefParray parray);
 
 // Builds a display list that is defined with an array of dl_def's, placing it at dl_location.
 // dl_location - location in memory for the DL

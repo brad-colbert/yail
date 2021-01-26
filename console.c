@@ -19,8 +19,11 @@
 
 // Externs
 extern byte GRAPHICS_MODE;
+extern void* MY_SCRN_MEM;
+extern void* MY_SCRN_MEM_TEMP;
 extern byte IMAGE_FILE_TYPE;
 extern struct dl_store image_dl_store;
+
 
 // Globals
 byte console_state = CONSOLE_HIDDEN;
@@ -241,6 +244,11 @@ void console_update(void)
         // Handle quit
         if(input == CH_ESC)
         {
+            #ifdef DEBUG_CONSOLE
+            cputs("ESC hit... quiting\n\r");
+            cgetc();
+            #endif
+
             set_graphics(GRAPHICS_0);
             return;
         }
@@ -252,6 +260,11 @@ void console_update(void)
         switch(input)
         {
             case CH_ENTER:
+                #ifdef DEBUG_CONSOLE
+                cputs("ENTER hit... toggle console\n\r");
+                cgetc();
+                #endif
+
                 console_state = !console_state;
                 set_graphics(GRAPHICS_MODE);
                 break;

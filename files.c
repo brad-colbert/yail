@@ -15,6 +15,9 @@
 
 // Externs
 extern byte GRAPHICS_MODE;
+extern struct dl_store image_dl_store;
+extern void* MY_SCRN_MEM;
+extern void* MY_SCRN_MEM_TEMP;
 
 void save_file(const char filename[],
                struct dl_store dl_mem[MAX_N_DL],
@@ -122,6 +125,14 @@ byte load_file(const char filename[],
                 n = read(fd, (void*)&min, 1);
                 n = read(fd, (void*)&bld, 1);
 
+                // Version check.  If we are trying to load a file that is > ours
+                // we may not be able to.  Warning for now.
+                if((maj < MAJOR_VERSION) || (min < MINOR_VERSION) || (bld < BUILD_VERSION))
+                {
+                    reset_console();
+                    cprintf("Warning version: %d %d %d", maj, min, bld);
+                }
+
                 // Read the graphics mode
                 n = read(fd, (void*)gfx_mode, 1);
                 if(set_graphics_mode)
@@ -132,7 +143,7 @@ byte load_file(const char filename[],
                 cputs("Read the graphics mode\n\r");
                 #endif
 
-                // Read the DLs
+                // Read the all data
                 while(n > 0)
                 {
                     // Read the type token
@@ -152,6 +163,23 @@ byte load_file(const char filename[],
                     #ifdef DEBUG_FILELOAD
                     cprintf("Read the mem location %02X\n\r", mem_loc);
                     #endif
+
+                    // Version 1.0.0, we have to overwrite the address with
+                    // the current destination address which is no longer
+                    // fixed.
+                    //if((maj == 1) && (min == 0) && (bld == 0))
+                    {
+                        switch(type)
+                        {
+                            case DL_TOKEN:
+                                mem_loc = (unsigned)image_dl_store.mem;
+                            break;
+                            case MEM_TOKEN:
+                                mem_loc = MY_SCRN_MEM; // Until we have a memory location.
+                            break;
+                        }
+                    }
+
                     n = read(fd, &size, 2);
                     if(n < 1)
                         break;
@@ -188,17 +216,16 @@ byte load_file(const char filename[],
             case FILETYPE_PGM:
                 reset_console();   // clear the console mem
                 disable_console(); // disable the console (Gf9 DLI doesn't like file loads)
-                graphics_clear();
+//                graphics_clear();
 
                 switch(file_type)
                 {
                     case FILETYPE_PBM:
-                        //set_graphics(GRAPHICS_8);
-                        readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
                         set_graphics(GRAPHICS_8);
+                        readPBMIntoGfx8(fd, (void*)MY_SCRN_MEM);
                         break;
                     case FILETYPE_PGM:
-                        set_graphics(GRAPHICS_9);
+                        //set_graphics(GRAPHICS_9);
                         readPGMIntoGfx9(fd, (void*)MY_SCRN_MEM_TEMP, (void*)MY_SCRN_MEM);
                         break;
                 };

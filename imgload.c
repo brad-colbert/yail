@@ -4,11 +4,11 @@
 #include "graphics.h"
 #include "files.h"
 #include "utility.h"
-#include "displaylist.h"
 
 #include <atari.h>
 #include <conio.h>
 #include <peekpoke.h>
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -16,43 +16,81 @@
 extern byte GRAPHICS_MODE;
 
 //
+#define MALLOC_OVERHEAD 4
+
+//
 int main(int argc, char* argv[])
 {
-    // //dl_def dl = {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM};
-    // dl_def dl = {8, DL_MAP320x1x1, 220, 0, MY_SCRN_MEM};
-    // dl_def_parray dlist = 0x0;
-    // dl_def* dlist_ptr = 0x0;
-    // byte i = 0;
+    #if 0
+    unsigned chunk_size = 40;
+    unsigned num_chunks = 3*190;
+    unsigned len = chunk_size*num_chunks;
+    unsigned bound = 0x1000;
+    void* mem = NULL; //malloc(len);
+    void* mem_orig = NULL;
+    void* mem_bound = NULL; //nextBoundary(mem, bound);
+    unsigned mem_resize = 0; //((unsigned)mem_bound - (unsigned)mem) - (MALLOC_OVERHEAD);
+    unsigned mem_chunks = 0;
+    unsigned chunks_used = 0; //mem_used / chunk_size;
+    unsigned chunks_rem = num_chunks; //num_chunks - chunks_used;
 
-    // reset_console();
+    clrscr();
 
-    // dlist = expandDisplayList(&dl);
-    // dlist_ptr = dlist[0];
+    while(chunks_used < num_chunks)
+    {
+        mem = malloc(len);
 
-    // while(dlist_ptr)
-    // {
-    //     cprintf("%d: %d, %d, %d, %d, %02X\n\r", i, dlist_ptr->blank_lines, dlist_ptr->mode, dlist_ptr->lines, dlist_ptr->dli, dlist_ptr->address);
-    //     ++i;
-    //     dlist_ptr = dlist[i];
-    // }
+        if(!mem)
+            break;
 
-    // cleanupDL_Def_PArray(dlist);
-    // struct dl_store image_dl_store = { 0, 0 };
-    // dl_def dl[] = { {8, DL_MAP320x1x1, 211, 0, MY_SCRN_MEM},
-    //                 {0, DL_MAP320x1x1, 1, 1, 0x0},
-    //                 {0, DL_CHR40x8x1, 1, 1, CONSOLE_MEM}
-    //               };
-    // makeDisplayList(0xA000, dl, 3, &image_dl_store);
-    // print_dlist("DL", image_dl_store.mem);
-    // cgetc();
+        mem_orig = mem;
+        mem_bound = nextBoundary(mem, bound);
+        mem_resize = ((unsigned)mem_bound - (unsigned)mem) - (MALLOC_OVERHEAD);
+
+        if((mem_resize/chunk_size) > chunks_rem)
+        {
+            unsigned prev_mem_resize = mem_resize;
+            mem_resize = chunks_rem * chunk_size;
+
+        cprintf("%d=((%d/%d)-%d)*%d\n\r", mem_resize, prev_mem_resize, chunk_size, chunks_rem, chunk_size);
+        }
+
+        mem = realloc(mem, mem_resize);
+        mem_chunks = mem_resize / chunk_size;
+        chunks_used += mem_chunks;
+        chunks_rem = num_chunks - chunks_used;
+
+        cprintf("sz%d rz%d %p->%p us%d rm%d\n\r", len, mem_resize, mem, (void*)((unsigned)mem + mem_resize), chunks_used, chunks_rem);
+        cgetc();
+
+        len = chunks_rem * chunk_size;
+    }
+    
+    cprintf("%d\n\r", 4092/40);
+    #endif
+    allocSegmentedMemory(40, 220, 4096);
+    return 0;
 
 
     #if 0
-    void* testmem[26] = { 0x0, 0x0, 0x0 };
-    unsigned int memlo = PEEKW(743);
-    byte i = 0;
+    GfxDef gfxInfo;
+    /*
+    MemSegs segs;
+    size_t n = computeMemorySegmentation((void*)0x6000, 220 * 40, 40, 0x1000, &segs);
+    cgetc();
+    clrscr();
+    cprintf("** %d %p\n\r", n, &segs);
+    printMemorySegmentationTable(&segs);
+    freeMemorySegmentTable(&segs);
+    
+    cgetc();
+    */
+    clrscr();
+    makeGraphicsDef(GRAPHICS_8, &gfxInfo);
     #endif
 
+
+    #if 0
     // Clear the text and memory
     enable_console();
     cursor(1);
@@ -60,37 +98,9 @@ int main(int argc, char* argv[])
 
     save_current_graphics_state();
     
-    graphics_clear();
-
-
-    #if 0
-    cprintf("MEMLO %04X\r\n", memlo);
-
-    for(;i<26;++i)
-    {
-        testmem[i] = malloc(1024);
-        cprintf("buffloc(%d) = %p\r\n", i, testmem[i]);
-    }
-    //testmem[1] = malloc(40*220);
-    //cprintf("buffloc = %p\r\n", testmem[1]);
-    //testmem[2] = malloc(40*220);
-    //cprintf("buffloc = %p\r\n", testmem[2]);
-    for(i = 0;i<26;++i)
-        free(testmem[i]);
-    //free(testmem[1]);
-    //free(testmem[2]);
-
-    cgetc();
-    /*
-    return 0;
-    
-    */
-   #endif
-
-
-
     //memset(0x6000, 0x55, 0x6FFF);
-    set_graphics(GRAPHICS_8);  // Start in Gfx 8 for giggles
+    set_graphics(GRAPHICS_0);  // Start in Gfx 8 for giggles
+    //graphics_clear();
 
     if(argc > 1)
     {
@@ -105,6 +115,7 @@ int main(int argc, char* argv[])
     console_update();
 
     restore_graphics_state();
+    #endif
 
     return 0;
 }

@@ -4,31 +4,77 @@
 #define GRAPHICS_H
 
 #include "types.h"
+#include "utility.h"
+
+#include <stddef.h>
 
 //
 #define GRAPHICS_0 0
 #define GRAPHICS_8 1
 #define GRAPHICS_9 2
-#define GRAPHICS_10 3
-#define GRAPHICS_11 4
+#define GRAPHICS_10 4
+#define GRAPHICS_11 8
 #define GRAPHICS_CONSOLE_EN 0x10
 #define GRAPHICS_8_CONSOLE GRAPHICS_8 | GRAPHICS_CONSOLE_EN
 #define GRAPHICS_9_CONSOLE GRAPHICS_9 | GRAPHICS_CONSOLE_EN
 
-// Screen memory location (high resolution spaces 3 4K segments)
-#define MY_SCRN_MEM 0x8000 // 1024 byte aligned
-#define MY_SCRN_MEM_B 0x9000
-#define MY_SCRN_MEM_C 0xA000
-#define MY_SCRN_MEM_TEMP (MY_SCRN_MEM_C + 0x0400)
+// Memory usage, per line
+#define GFX_0_MEM_LINE 40
+#define GFX_8_MEM_LINE 40
+#define GFX_9_MEM_LINE 40
+#define GFX_10_MEM_LINE 40
+#define GFX_11_MEM_LINE 40
+
+// Lines per mode
+#define GFX_0_LINES 26
+#define GFX_8_LINES 220
+#define GFX_9_LINES 220
+#define GFX_10_LINES 220
+#define GFX_11_LINES 220
 
 //
-#define CONSOLE_MEM 0xBC40  // We should read this from the system before we switch
+//#define CONSOLE_MEM 0xBC40  // We should read this from the system before we switch
 
+// A simple structure for defining a display list in a code compact way
+typedef struct _DLModeDef
+{
+    byte blank_lines;
+    byte mode;        // From the Antic modes
+    byte lines;       // # of lines of the mode
+    byte dli;         // Switch for DLI
+    void* buffer;     // Address of screen memory for mode, 0x0000 if use SAVMSC + offset
+} DLModeDef;
+
+typedef DLModeDef** DLModeDefParray;
+
+typedef struct _DLDef
+{
+    void* address;         // location of the DL
+    size_t size;           // size in memory of the display list
+    DLModeDefParray modes; // compact definition of the display list
+} DLDef;
+
+typedef struct _GfxDef
+{
+    MemSegs buffer;
+    DLDef dl; 
+} GfxDef;
+
+void saveCurrentGraphicsState(void);
+void restoreGraphicsState(void);
+
+void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo);
+void makeGraphicsDef(byte mode, GfxDef* gfxInfo);
+
+void printDList(const char* name, DLDef* dlInfo);
+
+#if 0
 // Prototypes
 void save_current_graphics_state(void);
 void restore_graphics_state(void);
 void set_graphics(byte mode);
 void set_graphics_console(byte enable);
 void graphics_clear(void);
+#endif
 
 #endif // GRAPHICS_H

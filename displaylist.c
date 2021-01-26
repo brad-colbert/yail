@@ -10,15 +10,17 @@
 #include <string.h>
 #include <stdlib.h>
 
+//#define DEBUG_EXPAND_DL
+
 // Expands a display list memory references over 4k memory boundaries
 // Right now all lines are 40bytes
 #define BYTES_PER_LINE 40
 #define MAX_MEM_BLOCK 4096
 #define MAX_LINES_PER_BLOCK 102
 #define MEM_PER_BLOCK 4080
-dl_def_parray expandDisplayList(dl_def* dl)
+DLDefParray expandDisplayList(DLDef* dl)
 {
-    dl_def_parray new_dl_defs;
+    DLDefParray new_dl_defs;
     byte i = 0, count = 1;
     byte* memptr = (byte*)dl->address;
     unsigned memsize = dl->lines*BYTES_PER_LINE;
@@ -27,26 +29,27 @@ dl_def_parray expandDisplayList(dl_def* dl)
     unsigned next_4k = memptr_4k - rem;
     unsigned line_count = 0;
 
-    #ifdef DEBUG_EXPAND_DL
-    cprintf("Initial memptr=%p memsize=%d next_4k=%02X\n\r", memptr, memsize, next_4k);
+    #if def DEBUG_EXPAND_DL
+    cprintf("Initial m=%p s=%d 4k=%02X\n\r", memptr, memsize, next_4k);
     #endif
 
     // Count divs
-    for(; i < dl->lines; i++)
+    for(i = 0; i < dl->lines; i++)
     {
         memptr = (byte*)((unsigned)memptr + (unsigned)BYTES_PER_LINE);
-        if(memptr > (byte*)next_4k)
+        if(memptr >= (byte*)next_4k)
         {
             memptr = (byte*)next_4k;
             ++count;
+
+            memptr_4k = (unsigned)memptr + 4096;
+            rem = memptr_4k % 4096;
+            next_4k = memptr_4k - rem;
         }
 
-        memptr_4k = (unsigned)memptr + 4096;
-        rem = memptr_4k % 4096;
-        next_4k = memptr_4k - rem;
 
         #ifdef DEBUG_EXPAND_DL
-        cprintf("%d memptr=%p memsize=%d next_4k=%02X\n\r", i, memptr, memsize, next_4k);
+        cprintf("c=%d: %d m=%p s=%d 4k=%02X\n\r", count, i, memptr, memsize, next_4k);
         #endif
     }
 
@@ -58,13 +61,13 @@ dl_def_parray expandDisplayList(dl_def* dl)
     #endif
 
     // Allocate count pointers
-    new_dl_defs = malloc(sizeof(dl_def*) * (count+1));
-    memset(new_dl_defs, 0x0, sizeof(dl_def*) * (count+1));
+    new_dl_defs = calloc(count+1, sizeof(dl_def*));
+    //memset(new_dl_defs, 0x0, sizeof(dl_def*) * (count+1));
 
     i = 0;
     while(line_count < dl->lines)
     {
-        dl_def* dlist_entry = malloc(sizeof(dl_def));
+        DLDef* dlist_entry = calloc(1, sizeof(DLDef));
         unsigned rem_lines = dl->lines - line_count;
         unsigned mem_use = rem_lines * BYTES_PER_LINE;
 
@@ -113,9 +116,9 @@ dl_def_parray expandDisplayList(dl_def* dl)
 }
 
 // Free's all of the memory used by the array.
-void cleanupDL_Def_PArray(dl_def_parray parray)
+void cleanupDL_Def_PArray(DLDefParray parray)
 {
-    dl_def* entry = parray[0];
+    DLDef* entry = parray[0];
     byte i = 0;
     while(entry)
     {
@@ -133,7 +136,7 @@ void cleanupDL_Def_PArray(dl_def_parray parray)
 // dl_location - location in memory for the DL
 // dl[]        - an array of dl_defs that are used to define the modes
 // n           - the number of dl_def entries
-unsigned makeDisplayList(void* dl_location, dl_def dl[], byte n, struct dl_store* dls)
+unsigned makeDisplayList(void* dl_location, DLDef dl[], byte n, struct dl_store* dls)
 {
     byte* dl_mem = dl_location;
     int idx;
@@ -150,11 +153,17 @@ unsigned makeDisplayList(void* dl_location, dl_def dl[], byte n, struct dl_store
 
         while(entry)
         {
+            #ifdef DEBUG_EXPAND_DL
+            cprintf("%d, %d, %d, %d, %02X\n\r", entry->blank_lines, entry->mode, entry->lines, entry->dli, entry->address);
+            #endif
             // Handle blanks, should calculate how many... just using base 8 for now
             for(jdx = 0; jdx < entry->blank_lines/8; jdx++)
                 *(dl_mem++) = (byte)DL_BLK8;
 
             // Handle mode.
+            #ifdef DEBUG_EXPAND_DL
+            cprintf("l:%d\n\r", entry->lines);
+            #endif
             for(jdx = 0; jdx < entry->lines; jdx++)
             {
                 if(jdx) // Following line after inital definition which may reference memory
@@ -185,6 +194,9 @@ unsigned makeDisplayList(void* dl_location, dl_def dl[], byte n, struct dl_store
                             *(dl_mem++) = (byte)entry->mode;  // Just a plain ol' mode line
                     }
                 }
+                #ifdef DEBUG_EXPAND_DL
+                cprintf("%02X ", *dl_mem);
+                #endif
             }
 
             ++kdx;
@@ -202,9 +214,9 @@ unsigned makeDisplayList(void* dl_location, dl_def dl[], byte n, struct dl_store
     dls->size = (unsigned)(dl_mem - (byte*)dl_location);
     dls->mem = dl_location;
 
-    //cgetc();
-    //print_dlist("DL", dl_location);
-    //cgetc();
+    // cgetc();
+    // print_dlist("DL", dl_location);
+    // cgetc();
 
     return dls->size;
 }
