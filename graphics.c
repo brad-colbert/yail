@@ -15,6 +15,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+//
+void printModeDefs(DLModeDef modeDefs[]);
+
 // Globals
 unsigned ORG_DLIST = 0;
 unsigned VDSLIST_STATE = 0;
@@ -44,107 +47,81 @@ void restoreGraphicsState(void)
     POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
 }
 
-void printModeDefs(DLModeDefParray modeDefs)
-{
-    byte count = 0;
-    DLModeDef* modeDef = modeDefs[count];
-    while(modeDef)
-    {
-        cprintf("%d, %d, %d, %d, %02X\n\r", modeDef->blank_lines, modeDef->mode, modeDef->lines, modeDef->dli, modeDef->buffer);
-        modeDef = modeDefs[++count];
-    }
-}
-
 void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo)
 {
-    // Allocate the buffer memory
     size_t memPerLine = 0;
     size_t linesPerSeg = 0;
-    DLModeDefParray modeDefs = NULL;
-    DLModeDef* modeDef = NULL;
-    MemSeg* segDef = NULL;
     byte segCount = 0, modeCount = 0;
     byte* dlCmd = NULL;
     unsigned i = 0;
-    segDef = buffInfo->segs[0];
-
-    printMemorySegmentationTable(buffInfo);
-    cputs("----------------------\n\r");
-    cgetc();
 
     switch(mode)
     {
         case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+        {
+            DLModeDef def = {8, DL_CHR40x8x1, GFX_0_MEM_LINE, 0, 0};
             memPerLine = GFX_0_MEM_LINE;
-            // modeDefs = calloc(2, sizeof(DLModeDef*));
-            // modeDefs[0] = calloc(1, sizeof(DLModeDef));
-            modeDefs = malloc(sizeof(DLModeDef*));
-            modeDefs[0] = malloc(sizeof(DLModeDef) * 2);
-            modeDefs[0]->blank_lines = 1;
-            modeDefs[0]->mode = DL_CHR40x8x1;
-            modeDefs[0]->lines = GFX_0_LINES;
-            modeDefs[1] = NULL;
+            dlInfo->modes[0] = def;
+            dlInfo->modes[1].blank_lines = 0xFF;
             break;
+        }
         case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
         case GRAPHICS_9:
         case GRAPHICS_10:
         case GRAPHICS_11:
+        {
+            DLModeDef def = {8, DL_MAP320x1x1, GFX_8_LINES, 0, 0};
             memPerLine = GFX_8_MEM_LINE;
-            // modeDefs = calloc(2, sizeof(DLModeDef*));
-            // modeDefs[0] = calloc(1, sizeof(DLModeDef));
-            modeDefs = malloc(sizeof(DLModeDef*));
-            modeDefs[0] = malloc(sizeof(DLModeDef) * 2);
-            modeDefs[0]->blank_lines = 8;
-            modeDefs[0]->mode = DL_MAP320x1x1;
-            modeDefs[0]->lines = GFX_8_LINES;
-            modeDefs[1] = NULL;
+            dlInfo->modes[0] = def;
+            dlInfo->modes[1].blank_lines = 0xFF;
+        }
     }
-    cprintf("%p: %p %p\n\r", modeDefs, modeDefs[0], modeDefs[1]);
-    cputs("----------------------\n\r");
-    cgetc();
 
-    printMemorySegmentationTable(buffInfo);
+    #ifdef DEBUG_GRAPHICS
+    clrscr();
+    printModeDefs(dlInfo->modes);
     cgetc();
-
-    printModeDefs(modeDefs);
-    cgetc();
-
+    clrscr();
+    #endif
 
     // Allocate 1K of memory.  Will shrink when done.
     dlInfo->address = malloc_constrianed(1024, 1024);
     dlCmd = dlInfo->address;
 
+    #ifdef DEBUG_GRAPHICS
     cprintf("dlInfo_ad%02X dlCmd%02X\n\r", dlInfo->address, dlCmd);
     cgetc();
+    clrscr();
+    #endif
 
-    modeDef = modeDefs[modeCount];
-    while(modeDef && segDef)
+    while((dlInfo->modes[modeCount].blank_lines != 0xFF) && buffInfo->segs[segCount].size)
     {
         unsigned modeLineCount = 0, segLineCount = 0;
-        linesPerSeg = segDef->size / memPerLine;
+        linesPerSeg = buffInfo->segs[segCount].size / memPerLine;
 
         // Blank lines don't cost any buffer memory
-        for(i = 0; i < modeDef->blank_lines; ++i)
+        for(i = 0; i < dlInfo->modes[modeCount].blank_lines; ++i)
             *(dlCmd++) = (byte)DL_BLK8;
 
-        for(; modeLineCount < modeDef->lines; ++modeLineCount, ++segLineCount)
+        for(; modeLineCount < dlInfo->modes[modeCount].lines; ++modeLineCount, ++segLineCount)
         {
-            byte b = (byte)modeDef->mode;
+            byte b = (byte)dlInfo->modes[modeCount].mode;
 
             if(segLineCount >= linesPerSeg)
             {
                 ++segCount;
-                segDef = buffInfo->segs[segCount];
-                linesPerSeg = segDef->size / memPerLine; // need to generalize memPerLine. base from modeDef.
+                linesPerSeg = buffInfo->segs[segCount].size / memPerLine; // need to generalize memPerLine. base from modeDef.
                 segLineCount = 0;
             }
 
             if(segLineCount)
             {
-                if(modeDef->dli)
+                if(dlInfo->modes[modeCount].dli)
                     b = (byte)DL_DLI(b);  // DLI flag triggered so generate
 
-                cprintf("%02X: %d %d %02X\n\r", ((unsigned)segDef->addr)+(segLineCount*40), modeLineCount, segLineCount, b);
+                #ifdef DEBUG_GRAPHICS
+                cprintf("%02X: %d %d %02X\n\r", ((unsigned)buffInfo->segs[segCount].addr)+(segLineCount*40), modeLineCount, segLineCount, b);
+                #endif
 
                 *(dlCmd++) = b;
             }
@@ -152,26 +129,34 @@ void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo)
             {
                 b = DL_LMS(b);
 
-                if(modeDef->dli)
+                if(dlInfo->modes[modeCount].dli)
                     b = DL_DLI(b);  // DLI flag triggered so generate
 
                 *(dlCmd++) = b;
 
-                cprintf("%02X: %d %d %02X ", ((unsigned)segDef->addr)+(segLineCount*40), modeLineCount, segLineCount, b);
+                #ifdef DEBUG_GRAPHICS
+                cprintf("%02X: %d %d %02X ", ((unsigned)buffInfo->segs[segCount].addr)+(segLineCount*40), modeLineCount, segLineCount, b);
+                #endif
 
-                *((unsigned*)dlCmd) = (unsigned)segDef->addr;  // Add the address
+                *((unsigned*)dlCmd) = (unsigned)buffInfo->segs[segCount].addr;  // Add the address
 
-                cprintf("(%p)\n\r", segDef->addr);
+                #ifdef DEBUG_GRAPHICS
+                cprintf("(%p)\n\r", buffInfo->segs[segCount].addr);
+                #endif
 
                 dlCmd+=2;
             }
 
-            if(!(modeLineCount % 20))
+            #ifdef DEBUG_GRAPHICS
+            if(!((modeLineCount+1) % 23))
             {
                 cgetc();
                 clrscr();
             }
+            #endif
         }
+
+        ++modeCount;
     } // all modeDefs
 
     // Add the JVB
@@ -182,68 +167,38 @@ void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo)
     // Finally clean up and shrink the memory down to the size of the DL
     dlInfo->size = (size_t)(dlCmd - (byte*)dlInfo->address);
     dlInfo->address = realloc(dlInfo->address, dlInfo->size);
-    dlInfo->modes = modeDefs;
-}
-
-// A little trickery, first we malloc a byte the size + some fudge.  Assuming it fits
-// free it and malloc the real deal;
-void allocateBuffer(size_t len, size_t alignment, MemSegs* segs)
-{
-    size_t n = len / 0x1000;  // 4k chunks, how many do we cross? not perfect
-    void* test = malloc(len + (16 * n));
-    computeMemorySegmentation(test, len, alignment, 0x1000, segs);
-    // Now reallocate the memory using which should be in the same place with the right size.
-    test = realloc(test, segs->size);
-    ((byte*)test)[segs->size-2] = 0xBE;
-    ((byte*)test)[segs->size-1] = 0xEF;
-
-    cprintf("%p X %p\n\r", test, segs->segs[0]->addr);
-    cgetc();
 }
 
 void makeGraphicsDef(byte mode, GfxDef* gfxInfo)
 {
-    size_t buffSize = 0;
-    size_t alignment;
+    memset(gfxInfo, 0, sizeof(GfxDef));
 
-    // Allocate the buffer memory
-    switch(mode & 0x0F)
+    switch(mode)
     {
-        case GRAPHICS_0:
-            buffSize = GFX_0_MEM_LINE * GFX_0_LINES;
-            alignment = GFX_0_MEM_LINE;
+        case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+            allocSegmentedMemory(GFX_0_MEM_LINE, GFX_0_LINES, 4096, &gfxInfo->buffer);
             break;
-        case GRAPHICS_8:
-            buffSize = GFX_8_MEM_LINE * GFX_8_LINES;
-            alignment = GFX_8_MEM_LINE;
-            break;
+        case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
         case GRAPHICS_9:
-            buffSize = GFX_9_MEM_LINE * GFX_9_LINES;
-            alignment = GFX_9_MEM_LINE;
-            break;
         case GRAPHICS_10:
-            buffSize = GFX_10_MEM_LINE * GFX_10_LINES;
-            alignment = GFX_10_MEM_LINE;
-            break;
         case GRAPHICS_11:
-            buffSize = GFX_11_MEM_LINE * GFX_11_LINES;
-            alignment = GFX_11_MEM_LINE;
-            break;
+            allocSegmentedMemory(GFX_8_MEM_LINE, GFX_8_LINES, 4096, &gfxInfo->buffer);
     }
 
-    allocateBuffer(buffSize, alignment, &gfxInfo->buffer);
+    makeDisplayList(GRAPHICS_8, &gfxInfo->buffer, &gfxInfo->dl);
+}
 
-    printMemorySegmentationTable(&gfxInfo->buffer);
-    cgetc();
+#ifdef DEBUG_GRAPHICS
+void printModeDefs(DLModeDef modeDefs[])
+{
+    byte i = 0;
+    for(; i < MAX_MODE_DEFS; ++i)
+    {
+        if(modeDefs[i].blank_lines == 0xFF)
+            return;
 
-    //clrscr();
-
-    // Make the display list
-    makeDisplayList(mode, &gfxInfo->buffer, &gfxInfo->dl);
-    cgetc();
-    clrscr();
-    printDList("DL", &gfxInfo->dl);
-    cgetc();
+        cprintf("%d, %d, %d, %d, %02X\n\r", modeDefs[i].blank_lines, modeDefs[i].mode, modeDefs[i].lines, modeDefs[i].dli, modeDefs[i].buffer);
+    }
 }
 
 // Shows the contents of a display list.
@@ -254,7 +209,7 @@ void printDList(const char* name, DLDef* dlInfo)
     byte b = 0x00, low, high;
     unsigned idx = 0;
 
-    cprintf("Displaylist %s at %p (%d)\n", name, dlInfo->address, dlInfo->size);
+    cprintf("Displaylist %s at %p (%d)\n\r", name, dlInfo->address, dlInfo->size);
     while(1)
     {
         if(idx)
@@ -267,6 +222,8 @@ void printDList(const char* name, DLDef* dlInfo)
             low = ((byte*)dlInfo->address)[++idx];
             high = ((byte*)dlInfo->address)[++idx];
             cprintf("%02X (%02x%02x)", b, low, high);
+            cgetc();
+            clrscr();
         }
         else
             cprintf("%02X", b);
@@ -277,6 +234,8 @@ void printDList(const char* name, DLDef* dlInfo)
             break;
     }
 }
+#endif
+
 #if 0
 // Globals (private)
 unsigned ORG_DLIST = 0;

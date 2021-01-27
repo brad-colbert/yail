@@ -68,7 +68,29 @@ int main(int argc, char* argv[])
     
     cprintf("%d\n\r", 4092/40);
     #endif
-    allocSegmentedMemory(40, 220, 4096);
+
+    /*
+    MemSegs memsegs;
+    DLDef dlDef;
+
+    allocSegmentedMemory(40, 220, 4096, &memsegs);
+    #ifdef DEBUG_MEMORY_CODE
+    printMemSegs(&memsegs);
+
+    cgetc();
+    #endif
+
+    makeDisplayList(GRAPHICS_8, &memsegs, &dlDef);
+    #ifdef DEBUG_GRAPHICS
+    cgetc();
+    clrscr();
+    printDList("DL", &dlDef);
+
+    cgetc();
+    #endif
+    */
+    GfxDef gfxInfo;
+    makeGraphicsDef(GRAPHICS_8, &gfxInfo);
     return 0;
 
 

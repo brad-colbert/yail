@@ -145,10 +145,11 @@ void readPBMIntoGfx8(int fd, byte* dmem)
 // Assumes destination will be Gfx9 formatted
 void readPGMIntoGfx9(int fd, byte* tmem, byte* dmem)
 {
-    const unsigned TMAX_SIZE = BYTES_PER_LINE * 68; // Max size of temp buffer (2560 bytes) about 2/3rds
-    byte* next_dmem = (byte*)dmem + 0x1000;
+    const unsigned TMAX_SIZE = BYTES_PER_LINE * 2; //68; // Max size of temp buffer (2560 bytes) about 2/3rds
+    //byte* next_dmem = (byte*)dmem + 0x1000;
     unsigned numread, i;
     unsigned numbytes = 0;
+    byte linecount = 1;
 
     readHeader(fd);
 
@@ -159,7 +160,7 @@ void readPGMIntoGfx9(int fd, byte* tmem, byte* dmem)
 
     // Parse the maximum pixel value
     {
-        int i, dc = 0;
+        int dc = 0;
         for(i = count-1; i >=0; i--)
         {
             unsigned digit = (unsigned)(buff[i] - ASC_0);
@@ -170,22 +171,27 @@ void readPGMIntoGfx9(int fd, byte* tmem, byte* dmem)
 
     while(numread = read(fd, tmem, TMAX_SIZE))
     {
+        unsigned memptr_4k = (unsigned)dmem + 4096;
+        unsigned rem = memptr_4k % 4096;
+        unsigned next_4k = memptr_4k - rem;
+
         // Check if we moved passed the next memory block.  If so, switch to it.
-        if((byte*)dmem + numread/2 > next_dmem)  // half because there are 4 bits per pixel.  Each byte is two pixels in Gr9
+        if((unsigned)dmem + (numread/2) > next_4k)  // half because there are 4 bits per pixel.  Each byte is two pixels in Gr9
         {
+        /*
             dmem = next_dmem;
             next_dmem += 0x1000;
-        }
-        /*
-        unsigned remaining = 
-        if(!((dmem + (numread/2)) % 0x1000))
-            dmem
         */
+            dmem = (byte*)next_4k;
+        }
 
         // Process
         for(i = 0; i < numread/2; i++)
-            ((byte*)dmem)[i] |= (( ((byte*)tmem)[i*2] & 0xF0) | (( ((byte*)tmem)[i*2+1] & 0xF0) >> 4));
+            //((byte*)dmem)[i] |= (( ((byte*)tmem)[i*2] & 0xF0) | (( ((byte*)tmem)[i*2+1] & 0xF0) >> 4));
+            ((byte*)dmem)[i] = linecount;
 
         dmem += numread/2;
+
+        ++linecount;
     }
 }

@@ -47,11 +47,12 @@ typedef struct _DLModeDef
 
 typedef DLModeDef** DLModeDefParray;
 
+#define MAX_MODE_DEFS 8
 typedef struct _DLDef
 {
     void* address;         // location of the DL
     size_t size;           // size in memory of the display list
-    DLModeDefParray modes; // compact definition of the display list
+    DLModeDef modes[MAX_MODE_DEFS]; // compact definition of the display list
 } DLDef;
 
 typedef struct _GfxDef
