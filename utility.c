@@ -55,6 +55,7 @@ void* malloc_constrianed(size_t size, size_t fence)
     return filler;
 }
 
+#if 0
 void* aligned_malloc(size_t required_bytes, size_t alignment)
 {
     void* p1; // original block
@@ -73,6 +74,7 @@ void aligned_free(void *p)
 {
     free(((void**)p)[-1]);
 }
+#endif
 
 #ifdef DEBUG_MEMORY_CODE
 void printMemSegs(const MemSegs* memsegs)
@@ -105,7 +107,7 @@ size_t allocSegmentedMemory(size_t block_size, size_t num_blocks, size_t boundar
 
     while(blocks_used < num_blocks)
     {
-        mem = malloc(len);
+        mem = calloc(1, len);
 
         if(!mem)
             break;
@@ -140,10 +142,36 @@ size_t allocSegmentedMemory(size_t block_size, size_t num_blocks, size_t boundar
 
         memsegs->segs[memsegs->num].addr = mem;
         memsegs->segs[memsegs->num].size = mem_resize;
+        memsegs->segs[memsegs->num].block_size = block_size; //(mem_resize / block_size) * block_size;
         ++memsegs->num;
     }
     memsegs->end = (void*)((unsigned)mem + mem_resize);
     memsegs->size = (unsigned)memsegs->end - (unsigned)memsegs->start;
     
+    #ifdef DEBUG_MEMORY_CODE
+    printMemSegs(memsegs);
+    cgetc();
+    #endif
+
     return memsegs->size;
+}
+
+/*
+typedef struct _MemSegs
+{
+    byte num;
+    void* start;
+    void* end;
+    size_t size;
+    MemSeg segs[MAX_NUM_SEGS];
+} MemSegs;
+*/
+void freeSegmentedMemory(MemSegs* memsegs)
+{
+    byte i = 0;
+    for(; i < MAX_NUM_SEGS; i++)
+        if(memsegs->segs[i].size > 0)
+            free(memsegs->segs[i].addr);
+
+    memset(memsegs, 0, sizeof(MemSegs));
 }

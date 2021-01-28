@@ -11,11 +11,13 @@
 
 // Reads a file from fd and writes numbytes of it into dmem.
 // Assumes destination will be Gfx8 formatted
-void readPBMIntoGfx8(int fd, byte* dmem);
+void readPBM(int fd);
+//void readPBMIntoGfx8(int fd, byte* dmem);
 
 // Reads a file from fd and writes numbytes of it into dmem.
 // Assumes destination will be Gfx9 formatted
-void readPGMIntoGfx9(int fd, byte* tmem, byte* dmem);
+void readPGM(int fd);
+//void readPGMIntoGfx9(int fd, byte* tmem, byte* dmem);
 
 //byte read_image_file(char* filename, byte* tmem, byte* dmem);
 

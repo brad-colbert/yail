@@ -36,6 +36,9 @@ struct mem_store
 #define MAX_N_MEM 8
 #define MEM_TOKEN 0x03
 
+byte imageFileType(const char filename[]);
+byte loadFile(const char filename[]);
+#if 0
 // filename - The name of the file to save the image.
 // gfx_mode - The graphics mode to set when displaying the image.
 // dl_mem - An array of pointers to the display lists
@@ -54,5 +57,6 @@ byte load_file(const char filename[],
                byte set_graphics_mode);
 
 byte image_file_type(const char filename[]);
+#endif
 
 #endif // FILES_H

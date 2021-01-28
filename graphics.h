@@ -9,12 +9,12 @@
 #include <stddef.h>
 
 //
-#define GRAPHICS_0 0
-#define GRAPHICS_8 1
-#define GRAPHICS_9 2
-#define GRAPHICS_10 4
-#define GRAPHICS_11 8
-#define GRAPHICS_CONSOLE_EN 0x10
+#define GRAPHICS_0 0x01
+#define GRAPHICS_8 0x02
+#define GRAPHICS_9 0x04
+#define GRAPHICS_10 0x08
+#define GRAPHICS_11 0x10
+#define GRAPHICS_CONSOLE_EN 0x80
 #define GRAPHICS_8_CONSOLE GRAPHICS_8 | GRAPHICS_CONSOLE_EN
 #define GRAPHICS_9_CONSOLE GRAPHICS_9 | GRAPHICS_CONSOLE_EN
 
@@ -57,6 +57,7 @@ typedef struct _DLDef
 
 typedef struct _GfxDef
 {
+    byte mode;
     MemSegs buffer;
     DLDef dl; 
 } GfxDef;
@@ -67,12 +68,17 @@ void restoreGraphicsState(void);
 void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo);
 void makeGraphicsDef(byte mode, GfxDef* gfxInfo);
 
+void setGraphicsMode(byte mode, byte keep);
+
+void clearFrameBuffer(void);
+
+void enableConsole(void);
+void disableConsole(void);
+
 void printDList(const char* name, DLDef* dlInfo);
 
 #if 0
 // Prototypes
-void save_current_graphics_state(void);
-void restore_graphics_state(void);
 void set_graphics(byte mode);
 void set_graphics_console(byte enable);
 void graphics_clear(void);

@@ -4,6 +4,7 @@
 #include "readNetPBM.h"
 #include "types.h"
 #include "consts.h"
+#include "graphics.h"
 
 #include <conio.h>
 
@@ -17,6 +18,7 @@
 
 // Globals
 byte IMAGE_FILE_TYPE = 0;
+extern GfxDef gfxState;
 
 // Locals
 int count;
@@ -114,84 +116,127 @@ int readHeader(int fd)
 
 // Reads a file from fb and writes numbytes of it into dmem.
 // Assumes destination will be Gfx8 formatted
-void readPBMIntoGfx8(int fd, byte* dmem)
+void readPBM(int fd)
+//void readPBMIntoGfx8(int fd)
 {
-    const unsigned MAX_SIZE = BYTES_PER_LINE * 102; // Max size of blocks (4080 bytes)
     unsigned numbytes = 0;
     unsigned numread = 0;
-
-    //memset(dmem, 0x55, 8800 + 32);//+0x0400);
-    //cgetc();
+    byte i = 0;
 
     readHeader(fd);
 
     numbytes = (w / 8) * h;
 
-    //cprintf("%d\n\r", numbytes);
-    //cgetc();
-
-    // Have to divide the reads so they are on 4K bounderies
-    while(numbytes)
+    // Read only the amount that will fit into memory.  Use the
+    // buffer as the guide
+    while(gfxState.buffer.segs[i].size > 0)
     {
-        numread = numbytes > MAX_SIZE ? MAX_SIZE : numbytes;
-        read(fd, dmem, numread);
-        dmem += 0x1000; // Move to the next 4K block.
+        size_t size = (gfxState.buffer.segs[i].size / gfxState.buffer.segs[i].block_size) * gfxState.buffer.segs[i].block_size;
+        numread = read(fd, gfxState.buffer.segs[i].addr, size);
+        if(numread < size)
+            break;
 
-        numbytes -= numread;
+        ++i;
     }
 }
 
 // Reads a file from fb and writes numbytes of it into dmem.
 // Assumes destination will be Gfx9 formatted
-void readPGMIntoGfx9(int fd, byte* tmem, byte* dmem)
+void readPGM(int fd)
 {
-    const unsigned TMAX_SIZE = BYTES_PER_LINE * 2; //68; // Max size of temp buffer (2560 bytes) about 2/3rds
-    //byte* next_dmem = (byte*)dmem + 0x1000;
-    unsigned numread, i;
-    unsigned numbytes = 0;
-    byte linecount = 1;
+    #if 0
+    byte segcount = 0;
+    while(gfxState.buffer.segs[segcount].size > 0)
+    {
+        MemSeg* seg = &gfxState.buffer.segs[segcount];
+        size_t blocks_in_seg = seg->size / seg->block_size;
 
+        memset(seg->addr, 0x33, seg->block_size);
+        memset((size_t)seg->addr + ((blocks_in_seg-1)*seg->block_size), 0x55, seg->block_size);
+        ++segcount;
+    }
+    #endif
+
+    unsigned numbytes = 0;
+    unsigned count = 0;
+    byte segcount = 0;
+    //int i;
+
+    // clrscr();
+    // gotoxy(0,0);
+    
+    memset(buff, 0, 255);
     readHeader(fd);
 
     numbytes = w * h;
 
+    // cprintf("%d ", numbytes);
+    // cgetc();
+
+    memset(buff, 0, 255);
     count = readLine(fd);
     mxp = 0;
 
+    // clrscr();
+    // gotoxy(0,0);
+    // cprintf("%d %s ", count, buff);
+    // cgetc();
+    // clrscr();
+    // gotoxy(0,0);
+
     // Parse the maximum pixel value
     {
-        int dc = 0;
-        for(i = count-1; i >=0; i--)
-        {
-            unsigned digit = (unsigned)(buff[i] - ASC_0);
-            mxp += pow10(digit, (unsigned)dc);
-            dc++;
-        } 
-    }
-
-    while(numread = read(fd, tmem, TMAX_SIZE))
+    int i;
+    for(i = 0; i < count; ++i)
     {
-        unsigned memptr_4k = (unsigned)dmem + 4096;
-        unsigned rem = memptr_4k % 4096;
-        unsigned next_4k = memptr_4k - rem;
+        unsigned digit = (unsigned)(buff[i] - ASC_0);
+        //cprintf("%d %d ", i, buff[i]);
+        mxp += pow10(digit, count - (i+1));
+    }
+    } 
 
-        // Check if we moved passed the next memory block.  If so, switch to it.
-        if((unsigned)dmem + (numread/2) > next_4k)  // half because there are 4 bits per pixel.  Each byte is two pixels in Gr9
+    // cprintf("%d ", mxp);
+    // cgetc();
+
+    while(gfxState.buffer.segs[segcount].size > 0)
+    {
+        MemSeg* seg = &gfxState.buffer.segs[segcount];
+        size_t blocksInSeg = seg->size / seg->block_size;
+        size_t segSize = blocksInSeg * seg->block_size;
+        void* workBuffer = calloc(seg->block_size * 2, 1);
+
+        if(workBuffer)
         {
-        /*
-            dmem = next_dmem;
-            next_dmem += 0x1000;
-        */
-            dmem = (byte*)next_4k;
+            byte* fb = seg->addr;
+            size_t blocks_ttl = 0;
+
+            while(blocks_ttl < blocksInSeg)
+            {
+                size_t n_read = 0;
+                // size_t n = seg->block_size * 2 * 10;
+
+                // if(blocks_ttl + (n/2) > blocksInSeg)
+                //     n = blocksInSeg - (blocks_ttl + (n/2));
+
+                n_read = read(fd, workBuffer, seg->block_size * 2);
+                if(n_read)
+                {
+                    int i;
+                    for(i = 0; i < n_read/2; ++i)
+                    {
+                        size_t segIdx = (blocks_ttl * seg->block_size) + i;
+                        ((byte*)seg->addr)[segIdx] = (( ((byte*)workBuffer)[i*2] & 0xF0) | (( ((byte*)workBuffer)[i*2+1] & 0xF0) >> 4));
+                    }
+                    // blocks_ttl += n_read / (2 * seg->block_size);
+                    ++blocks_ttl;
+                }
+                else
+                    break;
+            }
+
+            free(workBuffer);
         }
 
-        // Process
-        for(i = 0; i < numread/2; i++)
-            //((byte*)dmem)[i] |= (( ((byte*)tmem)[i*2] & 0xF0) | (( ((byte*)tmem)[i*2+1] & 0xF0) >> 4));
-            ((byte*)dmem)[i] = linecount;
-
-        dmem += numread/2;
-
-        ++linecount;
+        ++segcount;
     }
 }

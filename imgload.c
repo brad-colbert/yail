@@ -17,81 +17,57 @@ extern byte GRAPHICS_MODE;
 
 //
 #define MALLOC_OVERHEAD 4
+extern GfxDef gfxState;
+extern char* console_buff;
 
 //
 int main(int argc, char* argv[])
 {
-    #if 0
-    unsigned chunk_size = 40;
-    unsigned num_chunks = 3*190;
-    unsigned len = chunk_size*num_chunks;
-    unsigned bound = 0x1000;
-    void* mem = NULL; //malloc(len);
-    void* mem_orig = NULL;
-    void* mem_bound = NULL; //nextBoundary(mem, bound);
-    unsigned mem_resize = 0; //((unsigned)mem_bound - (unsigned)mem) - (MALLOC_OVERHEAD);
-    unsigned mem_chunks = 0;
-    unsigned chunks_used = 0; //mem_used / chunk_size;
-    unsigned chunks_rem = num_chunks; //num_chunks - chunks_used;
+    byte i = 0;
+    saveCurrentGraphicsState();
+    setGraphicsMode(GRAPHICS_8, 0);
 
-    clrscr();
-
-    while(chunks_used < num_chunks)
+    /* Test background
+    while(gfxState.buffer.segs[i].size > 0)
     {
-        mem = malloc(len);
-
-        if(!mem)
-            break;
-
-        mem_orig = mem;
-        mem_bound = nextBoundary(mem, bound);
-        mem_resize = ((unsigned)mem_bound - (unsigned)mem) - (MALLOC_OVERHEAD);
-
-        if((mem_resize/chunk_size) > chunks_rem)
-        {
-            unsigned prev_mem_resize = mem_resize;
-            mem_resize = chunks_rem * chunk_size;
-
-        cprintf("%d=((%d/%d)-%d)*%d\n\r", mem_resize, prev_mem_resize, chunk_size, chunks_rem, chunk_size);
-        }
-
-        mem = realloc(mem, mem_resize);
-        mem_chunks = mem_resize / chunk_size;
-        chunks_used += mem_chunks;
-        chunks_rem = num_chunks - chunks_used;
-
-        cprintf("sz%d rz%d %p->%p us%d rm%d\n\r", len, mem_resize, mem, (void*)((unsigned)mem + mem_resize), chunks_used, chunks_rem);
-        cgetc();
-
-        len = chunks_rem * chunk_size;
+        memset(gfxState.buffer.segs[i].addr, 0x55, gfxState.buffer.segs[i].size);
+        ++i;
     }
-    
-    cprintf("%d\n\r", 4092/40);
-    #endif
+    */
+
+    enableConsole();
+    console_update();
+
+    restoreGraphicsState();
+
+    return 0;
 
     /*
-    MemSegs memsegs;
-    DLDef dlDef;
 
-    allocSegmentedMemory(40, 220, 4096, &memsegs);
-    #ifdef DEBUG_MEMORY_CODE
-    printMemSegs(&memsegs);
+    console_buff = OS.savmsc;
+
+    saveCurrentGraphicsState();
+    setGraphicsMode(GRAPHICS_8)333**;
+    cgetc();
+
+    while(gfxState.buffer.segs[i].size > 0)
+    {
+        memset(gfxState.buffer.segs[i].addr, 0x33, gfxState.buffer.segs[i].size);
+        ++i;
+    }
+
+    for(i=0; i<80; i++)
+        console_buff[i] = i;
 
     cgetc();
-    #endif
-
-    makeDisplayList(GRAPHICS_8, &memsegs, &dlDef);
-    #ifdef DEBUG_GRAPHICS
+    enableConsole();
     cgetc();
-    clrscr();
-    printDList("DL", &dlDef);
-
+    disableConsole();
     cgetc();
-    #endif
-    */
-    GfxDef gfxInfo;
-    makeGraphicsDef(GRAPHICS_8, &gfxInfo);
+
+    restoreGraphicsState();
     return 0;
+    */
 
 
     #if 0

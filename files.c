@@ -13,6 +13,186 @@
 #include <string.h>
 #include <ctype.h> 
 
+// externals
+extern GfxDef gfxState;
+
+// returns a token based on the filetype determined from the extension
+byte imageFileType(const char filename[])
+{
+    byte len = strlen(filename);
+
+    if(len > 4)  // ext plus .
+    {
+        char* ext = 0x0;
+        int i;
+
+        // try to get the extension
+        for(i = 0; i < len; ++i)
+        {
+            if((filename[i] == 0x0E) || (filename[i] == 0x2E))
+            {
+                if((len - (i+1)) > 2)
+                {
+                    ext = (char*)&filename[i + 1];
+                    break;
+                }
+            }
+        }
+
+        if(ext)
+        {
+            if(toupper(ext[0]) == 'P')
+            {
+                if(toupper(ext[1]) == 'B')
+                    return FILETYPE_PBM;
+                if(toupper(ext[1]) == 'G')
+                    return FILETYPE_PGM;                
+            }
+            else if(toupper(ext[0]) == 'Y')
+                if(toupper(ext[1]) == 'A')
+                    return FILETYPE_YAI;
+        }
+    }
+}
+
+// load a file into the graphics frame buffer
+byte loadFile(const char filename[])
+{
+    int fd = open(filename, O_RDONLY);
+    if(fd >= 0)
+    {
+        byte file_type = imageFileType(filename);
+
+        //cprintf("Loading... %s", filename);
+
+        switch(file_type)
+        {
+            case FILETYPE_YAI:
+            #if 0
+            {
+                byte i = 0;
+                byte n = 0, maj = 0, min = 0, bld = 0;
+
+                // Read the version #
+                n = read(fd, (void*)&maj, 1);
+                n = read(fd, (void*)&min, 1);
+                n = read(fd, (void*)&bld, 1);
+
+                // Version check.  If we are trying to load a file that is > ours
+                // we may not be able to.  Warning for now.
+                if((maj < MAJOR_VERSION) || (min < MINOR_VERSION) || (bld < BUILD_VERSION))
+                {
+                    reset_console();
+                    cprintf("Warning version: %d %d %d", maj, min, bld);
+                }
+
+                // Read the graphics mode
+                n = read(fd, (void*)gfx_mode, 1);
+                if(set_graphics_mode)
+                    set_graphics(*gfx_mode);
+
+                #ifdef DEBUG_FILELOAD
+                gotoxy(0,0);
+                cputs("Read the graphics mode\n\r");
+                #endif
+
+                // Read the all data
+                while(n > 0)
+                {
+                    // Read the type token
+                    byte type;
+                    unsigned mem_loc;
+                    unsigned size;
+
+                    n = read(fd, (void*)&type, 1);
+                    if(n < 1)
+                        break;
+                    #ifdef DEBUG_FILELOAD
+                    cprintf("Read the type %d\n\r", type);
+                    #endif
+                    n = read(fd, &mem_loc, 2);
+                    if(n < 1)
+                        break;
+                    #ifdef DEBUG_FILELOAD
+                    cprintf("Read the mem location %02X\n\r", mem_loc);
+                    #endif
+
+                    // Version 1.0.0, we have to overwrite the address with
+                    // the current destination address which is no longer
+                    // fixed.
+                    //if((maj == 1) && (min == 0) && (bld == 0))
+                    {
+                        switch(type)
+                        {
+                            case DL_TOKEN:
+                                mem_loc = (unsigned)image_dl_store.mem;
+                            break;
+                            case MEM_TOKEN:
+                                mem_loc = MY_SCRN_MEM; // Until we have a memory location.
+                            break;
+                        }
+                    }
+
+                    n = read(fd, &size, 2);
+                    if(n < 1)
+                        break;
+                    #ifdef DEBUG_FILELOAD
+                    cprintf("Read the size %d\n\r", size);
+                    #endif
+                    n = read(fd, (void*)mem_loc, size);
+                    if(n < 1)
+                        break;
+                    #ifdef DEBUG_FILELOAD
+                    cprintf("Read the data %d\n\r", n);
+                    #endif
+
+                    switch(type)
+                    {
+                        case DL_TOKEN:
+                            dl_mem[i].size = size;
+                            dl_mem[i].mem = (void*)mem_loc;
+                            break;
+                        case DLI_TOKEN:
+                            dli_mem[i].size = size;
+                            dli_mem[i].mem = (void*)mem_loc;
+                            break;
+                        case MEM_TOKEN:
+                            gfx_mem[i].size = size;
+                            gfx_mem[i].mem = (void*)mem_loc;
+                            break;
+                    }
+                } // while n
+            }
+            #endif
+            break;
+            
+            case FILETYPE_PBM:
+            case FILETYPE_PGM:
+                //disableConsole();
+
+                switch(file_type)
+                {
+                    case FILETYPE_PBM:
+                        setGraphicsMode(GRAPHICS_8, 0);
+                        readPBM(fd);
+                        break;
+                    case FILETYPE_PGM:
+                        setGraphicsMode(GRAPHICS_9, 0);
+                        readPGM(fd);
+                        break;
+                };
+            break; 
+        }
+
+        close(fd);
+    }
+    else
+        cprintf("ERROR: Problem opening file %s", filename);
+
+    return 0;
+}
+
+#if 0
 // Externs
 extern byte GRAPHICS_MODE;
 extern struct dl_store image_dl_store;
@@ -277,3 +457,4 @@ byte image_file_type(const char filename[])
         }
     }
 }
+#endif

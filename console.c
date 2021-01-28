@@ -15,93 +15,68 @@
 #include <string.h>
 
 // Defines
+#define CONSOLE_LINES 4
+#define CONSOLE_HIDDEN 0
+#define CONSOLE_SHOWN 1
 #define MAX_LINE_LEN 40
 
 // Externs
-extern byte GRAPHICS_MODE;
-extern void* MY_SCRN_MEM;
-extern void* MY_SCRN_MEM_TEMP;
 extern byte IMAGE_FILE_TYPE;
-extern struct dl_store image_dl_store;
-
 
 // Globals
+byte console_lines = CONSOLE_LINES;
 byte console_state = CONSOLE_HIDDEN;
-char* console_mem = (byte*)CONSOLE_MEM;
-char line[MAX_LINE_LEN+1];
+#ifdef CONSOLE_USE_LOCAL_BUFFER
+char console_buff[GFX_0_MEM_LINE * CONSOLE_LINES];
+#else
+char* console_buff = 0x0;
+#endif
 char* tokens[] = { 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 5 tokens
 byte done = FALSE;
 
 void reset_console(void)
 {
-    memset(line, 0, 40);           // wipe the input line
-    memset(console_mem, 0, 40*24); // wipe all of the console mem
+    memset(console_buff, 0, GFX_0_MEM_LINE * console_lines); // wipe all of the console mem
     gotoxy(0,0);                   // start at the begining of the input line
 }
 
-void enable_console(void)
-{
-    console_state = CONSOLE_SHOWN;
-}
-
-void disable_console(void)
-{
-    console_state = CONSOLE_HIDDEN;
-}
-
-byte skip_empty(byte p)
-{
-    byte i;
-    for(i = p; i < MAX_LINE_LEN; ++i)
-    {
-        if(line[i] != ' ')
-            return i;
-        if(line[i] == 0x0)
-            return MAX_LINE_LEN;
-    }
-
-    return MAX_LINE_LEN;
-}
-
-byte skip_text(byte p)
-{
-    byte i;
-    for(i = p; i < MAX_LINE_LEN; ++i)
-    {
-        if(line[i] == ' ')
-            return i;
-        if(line[i] == 0x0)
-            return MAX_LINE_LEN;
-    }
-
-    return MAX_LINE_LEN;
-}
-
+#define SEARCHING_FOR_TOKEN 1
+#define START_OF_TOKEN 2
+#define END_OF_TOKEN 3
 byte get_tokens(byte endx)
 {
     byte count = 0;
-    byte x = 0;
-
-    while(1)
+    byte state = SEARCHING_FOR_TOKEN;
+    byte i;
+    for(i = 0; i < endx; ++i)
     {
-        x = skip_empty(x);
-
-        if(x < endx)
+        switch(state)
         {
-            if(count < 3)
-            {
-                tokens[count++] = &line[x];
-                x = skip_text(x);
-            }
+            case SEARCHING_FOR_TOKEN:
+                if(console_buff[i] != 0x0)
+                {
+                    tokens[count] = &console_buff[i];
+                    state = START_OF_TOKEN;
+                    ++count;
+                }
+                break;
+            case START_OF_TOKEN:
+                if(console_buff[i] == 0x0)
+                {
+                    state = SEARCHING_FOR_TOKEN;
+                }
+                break;
         }
-        else
-            break;
     }
 
-    // Replace spaces with nulls
-    for(x = 0; (x < MAX_LINE_LEN) || (line[x] == 0x0) ; ++x)
-        if(line[x] == ' ')
-            line[x] = 0x0;
+    #ifdef DEBUG_CONSOLE
+    gotoxy(0,2);
+    cprintf("%p  ", &tokens[0]);
+    for(i = 0; i < count; ++i)
+        cprintf("%s,", tokens[i]);
+    cputs("\n\r");
+    cgetc();
+    #endif
 
     return count;
 }
@@ -121,6 +96,7 @@ void process_command(byte ntokens)
 
     if(strncmp(tokens[0], "help", 4) == 0)
     {
+        byte old_console_lines = console_lines;
         const char help[] =
         "help - This screan\n\r"
         "quit - Exit this utility\n\r"
@@ -131,12 +107,13 @@ void process_command(byte ntokens)
         "\n\r"
         "Any key to continue...\n\r";
 
-        byte last_graphics_mode = GRAPHICS_MODE;  // Save current graphics mode
-        set_graphics(GRAPHICS_0);                 // Switch to text mode
-        gotoxy(0,0);                              // Start at the console origin
+        console_lines = 8;
+        enableConsole();
+        reset_console();
         cputs(help);                              // Show the help text
         cgetc();                                  // Wait
-        set_graphics(last_graphics_mode);         // Switch back to starting graphics mode
+        clrscr();
+        console_lines = old_console_lines;
     }
 
     if(strncmp(tokens[0], "quit", 4) == 0)
@@ -152,25 +129,22 @@ void process_command(byte ntokens)
         {
             switch(tokens[1][0])
             {
-                case '0':
-                    set_graphics(GRAPHICS_0);
+                case 16:
+                    setGraphicsMode(GRAPHICS_0, 1);
                     break;
-
-                case '8':
-                    set_graphics(GRAPHICS_8);
+                case 24:
+                    setGraphicsMode(GRAPHICS_8, 1);
                     break;
-
-                case '9':
-                    set_graphics(GRAPHICS_9);
+                case 25:
+                    setGraphicsMode(GRAPHICS_9, 1);
                     break;
-
-                case '1':
+                case 17:
                     switch(tokens[1][1])
-                    {   case '0':
-                            set_graphics(GRAPHICS_10);
+                    {   case 16:
+                            setGraphicsMode(GRAPHICS_10, 1);
                             break;
-                        case '1':
-                            set_graphics(GRAPHICS_11);
+                        case 17:
+                            setGraphicsMode(GRAPHICS_11, 1);
                             break;
                     }
                     break;
@@ -180,29 +154,27 @@ void process_command(byte ntokens)
 
     if(strncmp(tokens[0], "cls", 3) == 0)
     {
-        graphics_clear();
+        clearFrameBuffer();
     }
 
     if(strncmp(tokens[0], "load", 4) == 0)
     {
         if(ntokens > 1)
         {
-            struct dl_store dl_mem[MAX_N_DL];
-            struct dli_store dli_mem[MAX_N_DLI];
-            struct mem_store gfx_mem[MAX_N_MEM];
-
             fix_chars(tokens[1]);
-            load_file(tokens[1], &GRAPHICS_MODE, dl_mem, dli_mem, gfx_mem, 1);
+            loadFile(tokens[1]);
         }
         else
         {
             gotoxy(0,0);
+            clrscr();
             cprintf("ERROR: File not specified");
         }
     }
 
     if(strncmp(tokens[0], "save", 4) == 0)
     {
+        /*
         if(ntokens > 1)
         {
             struct dl_store dl_mem[MAX_N_DL];
@@ -229,13 +201,18 @@ void process_command(byte ntokens)
             gotoxy(0,0);
             cprintf("ERROR: File not specified");
         }
+        */
     }
 }
 
-//#define DEBUG_CONSOLE
-
 void console_update(void)
 {
+    byte x = 0;
+    if(!console_buff)
+        console_buff = OS.savmsc;
+
+    reset_console();
+
     while(!done)
     {
         byte input = cgetc();
@@ -248,36 +225,9 @@ void console_update(void)
             cputs("ESC hit... quiting\n\r");
             cgetc();
             #endif
-
-            set_graphics(GRAPHICS_0);
             return;
         }
-
-        // Control the display of the console:
-        // Keypress, if the console is not up, bring it up.
-        // Enter, not up, bring it up.  Up, bring it down.
-        // Handle command
-        switch(input)
-        {
-            case CH_ENTER:
-                #ifdef DEBUG_CONSOLE
-                cputs("ENTER hit... toggle console\n\r");
-                cgetc();
-                #endif
-
-                console_state = !console_state;
-                set_graphics(GRAPHICS_MODE);
-                break;
-
-            default:
-                if(!console_state)
-                {
-                    enable_console();
-                    set_graphics(GRAPHICS_MODE);
-                }
-                break;
-        }
-    
+   
         // Handle command
         switch(input)
         {
@@ -286,7 +236,24 @@ void console_update(void)
                 // process the tokens
                 byte ntokens = 0;
 
+                #ifdef DEBUG_CONSOLE
+                gotoxy(0,3);
+                cprintf("%p", console_buff);
+                #endif
+
+                cursor(0);
+
                 ntokens = get_tokens(x + 1);
+
+                #ifdef DEBUG_CONSOLE
+                gotoxy(0,4);
+                cprintf("%d  ", ntokens);
+                gotoxy(0,5);
+                cprintf("%d\n\r", ntokens);
+                #endif
+
+                //memset(console_buff, 0, 40);
+                //gotoxy(0,0);
 
                 #ifdef DEBUG_CONSOLE
                 // For debugging purposes, should display below the input
@@ -312,8 +279,27 @@ void console_update(void)
                 }
                 #endif
 
-                if(ntokens)
+                if(ntokens > 0)
+                {
                     process_command(ntokens);
+
+                    console_state = FALSE;
+                    disableConsole();
+                }
+                else
+                {
+                    if(console_state)
+                    {
+                        disableConsole();
+                        console_state = FALSE;
+                    }
+                    else
+                    {
+                        enableConsole();
+                        console_state = TRUE;
+                    }
+                        
+                }
 
                 reset_console();
             }
@@ -322,15 +308,12 @@ void console_update(void)
             case CH_DEL:
                 if(x > 0)
                 {
-                    line[x-1] = 0x0;
-                    console_mem[x-1] = 0x0;
+                    console_buff[x-1] = 0x0;
                     gotox(x-1);
                 }
             break;
 
             default:
-                line[x] = input;
-                line[x+1] = 0x0;
                 #ifdef DEBUG_CONSOLE
                 {
                     byte i;
@@ -342,6 +325,13 @@ void console_update(void)
                     gotoxy(x, 0);
                 }
                 #endif
+                if(!console_state)
+                {
+                    console_state = TRUE;
+                    enableConsole();
+                }
+
+                cursor(1);
                 cputc(input);
         }
     }
