@@ -174,6 +174,10 @@ void process_command(byte ntokens)
 
     if(strncmp(tokens[0], "save", 4) == 0)
     {
+        if(ntokens > 1)
+        {
+            saveFile(tokens[1]);
+        }
         /*
         if(ntokens > 1)
         {
@@ -196,12 +200,12 @@ void process_command(byte ntokens)
 
             save_file(tokens[1], dl_mem, dli_mem, gfx_mem);
         }
+        */
         else
         {
             gotoxy(0,0);
             cprintf("ERROR: File not specified");
         }
-        */
     }
 }
 

@@ -193,7 +193,7 @@ void generateDisplayList(const MemSegs* buffInfo, DLDef* dlInfo)
     }
 
     // Add the JVB
-    *(dlCmd++) = DL_JVB;
+    //*(dlCmd++) = DL_JVB;
     *(dlCmd++) = DL_JMP;
     *((unsigned*)dlCmd) = (unsigned)dlInfo->address;
     dlCmd+=2;
@@ -402,6 +402,9 @@ void setGraphicsMode(byte mode, byte keep)
         // 
         makeGraphicsDef(mode, &gfxState);
     }
+
+    //if(mode == gfxState.mode)
+    //    return;
 
     #ifdef DEBUG_GRAPHICS
     cprintf("%p %p\n\r", gfxState.dl.address, gfxState.buffer.start);

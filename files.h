@@ -38,6 +38,7 @@ struct mem_store
 
 byte imageFileType(const char filename[]);
 byte loadFile(const char filename[]);
+void saveFile(const char filename[]);
 #if 0
 // filename - The name of the file to save the image.
 // gfx_mode - The graphics mode to set when displaying the image.
