@@ -41,7 +41,7 @@ void enable_9_dli(void) {
     __asm__("pha");
     __asm__("txa");
     __asm__("pha");
-    //__asm__("sta %w", WSYNC);
+    __asm__("sta %w", WSYNC);
     POKE(PRIOR, ORG_GPRIOR | GFX_9);
     POKEW(VDSLST, (unsigned)disable_9_dli);
     __asm__("pla");
@@ -73,7 +73,7 @@ void disable_9_dli(void) {
 
 void saveCurrentGraphicsState(void)
 {
-    ORG_SDLIST = OS.sdlst;
+    ORG_SDLIST = PEEK(SDLSTL); //OS.sdlst;
     VDSLIST_STATE = OS.vdslst;
     NMI_STATE = ANTIC.nmien;
     ORG_GPRIOR = OS.gprior;       // Save current priority states
@@ -86,7 +86,7 @@ void restoreGraphicsState(void)
 {
     ANTIC.nmien = NMI_STATE; //POKE(NMIEN, NMI_STATE);
     OS.vdslst = VDSLIST_STATE; //POKEW(VDSLST, VDSLIST_STATE);
-    OS.sdlst = ORG_SDLIST; //POKEW(SDLSTL, ORG_DLIST);
+    POKEW(SDLSTL, ORG_SDLIST); //OS.sdlst = ORG_SDLIST;
     OS.color1 = ORG_COLOR1; //POKE(COLOR1, ORG_COLOR1);
     OS.color2 = ORG_COLOR2; //POKE(COLOR2, ORG_COLOR2);
     OS.gprior = ORG_GPRIOR; //POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
@@ -104,7 +104,12 @@ void generateDisplayList(const MemSegs* buffInfo, DLDef* dlInfo)
     unsigned line_in_seg = 1;
 
     // Allocate 1K of memory.  Will shrink when done.
-    dlInfo->address = malloc_constrianed(1024, 1024);
+    //clrscr();
+    //cprintf("dl %p\n\r", gfxState.dl.address);
+    if(!dlInfo->address)
+        dlInfo->address = malloc_constrianed(1024, 1024);
+    // cprintf("dl %p\n\r", gfxState.dl.address);
+    // cgetc();
     dlCmd = dlInfo->address;
 
     #ifdef DEBUG_GRAPHICS
@@ -193,8 +198,7 @@ void generateDisplayList(const MemSegs* buffInfo, DLDef* dlInfo)
     }
 
     // Add the JVB
-    //*(dlCmd++) = DL_JVB;
-    *(dlCmd++) = DL_JMP;
+    *(dlCmd++) = DL_JVB;
     *((unsigned*)dlCmd) = (unsigned)dlInfo->address;
     dlCmd+=2;
 
@@ -214,7 +218,7 @@ void generateDisplayList(const MemSegs* buffInfo, DLDef* dlInfo)
     #endif
 
 
-    dlInfo->address = realloc(dlInfo->address, dlInfo->size);
+    //dlInfo->address = realloc(dlInfo->address, dlInfo->size);
 }
 
 void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo)
@@ -224,6 +228,9 @@ void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo)
     byte segCount = 0, modeCount = 0;
     byte* dlCmd = NULL;
     unsigned i = 0;
+
+    // Clear the modes
+    memset(&dlInfo->modes, 0, sizeof(DLModeDef[MAX_MODE_DEFS]));
 
     switch(mode)
     {
@@ -246,7 +253,6 @@ void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo)
             memPerLine = GFX_8_MEM_LINE;
             dlInfo->modes[0] = def;
             dlInfo->modes[1].blank_lines = 0xFF;
-            OS.vdslst = VDSLIST_STATE;
         }
         break;
         case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
@@ -261,10 +267,11 @@ void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo)
             dlInfo->modes[0] = gfx;
             dlInfo->modes[1] = console;
             dlInfo->modes[2].blank_lines = 0xFF;
-            OS.vdslst = VDSLIST_STATE;
         }
         break;
         case GRAPHICS_9_CONSOLE:
+        case GRAPHICS_10_CONSOLE:
+        case GRAPHICS_11_CONSOLE:
         {
             DLModeDef gfx = {8, DL_MAP320x1x1, 0, 0, 0x0};
             DLModeDef gfx_dli = {0, DL_MAP320x1x1, 1, 1, 0x0};
@@ -290,7 +297,6 @@ void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo)
                 dlInfo->modes[2] = console;
                 dlInfo->modes[3].blank_lines = 0xFF;
             }
-            OS.vdslst = disable_9_dli;
         }
         break;
 
@@ -314,23 +320,21 @@ void freeDisplayList(DLDef* dlInfo)
 
 void makeGraphicsDef(byte mode, GfxDef* gfxInfo)
 {
-    memset(gfxInfo, 0, sizeof(GfxDef));
-
     switch(mode)
     {
-        case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+        case GRAPHICS_0:
             allocSegmentedMemory(GFX_0_MEM_LINE, GFX_0_LINES, 4096, &gfxInfo->buffer);
             break;
-        case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
+        case GRAPHICS_8:
         case GRAPHICS_9:
         case GRAPHICS_10:
         case GRAPHICS_11:
-        case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
+        case GRAPHICS_8_CONSOLE:
         case GRAPHICS_9_CONSOLE:
             allocSegmentedMemory(GFX_8_MEM_LINE, GFX_8_LINES, 4096, &gfxInfo->buffer);
     }
 
-    makeDisplayList(mode, &gfxInfo->buffer, &gfxInfo->dl);
+//    makeDisplayList(mode, &gfxInfo->buffer, &gfxInfo->dl);
 }
 
 void enableConsole()
@@ -340,79 +344,88 @@ void enableConsole()
         case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
             break;
         case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
-        case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
+        {
+            gfxState.mode |= GRAPHICS_CONSOLE_EN;
+
+            makeDisplayList(gfxState.mode, &gfxState.buffer, &gfxState.dl);
+            //OS.sdlst = gfxState.dl;
+//            POKEW(SDLSTL, gfxState.dl.address);
+
+            //freeDisplayList(&gfxState.dl);
+            //gfxState.dl = newDl;
+        }
+        break;
         case GRAPHICS_9:
-        case GRAPHICS_9_CONSOLE:
         case GRAPHICS_10:
         case GRAPHICS_11:
         {
-            DLDef newDl;
-
             gfxState.mode |= GRAPHICS_CONSOLE_EN;
 
-            makeDisplayList(gfxState.mode, &gfxState.buffer, &newDl);
-            OS.sdlst = newDl.address;
+            makeDisplayList(gfxState.mode, &gfxState.buffer, &gfxState.dl);
+            //OS.sdlst = gfxState.dl;
+//            POKEW(SDLSTL, gfxState.dl.address);
 
-            freeDisplayList(&gfxState.dl);
-            gfxState.dl = newDl;
-            // freeDisplayList(&gfxState.dl);
-            // makeDisplayList(gfxState.mode, &gfxState.buffer, &gfxState.dl);
-            // OS.sdlst = gfxState.dl.address;
+            //freeDisplayList(&gfxState.dl);
+            //gfxState.dl = newDl;
+
+            //OS.vdslst = disable_9_dli;
+            //ANTIC.nmien = 0x80 | 0x40;
+//            POKEW(0x200, disable_9_dli);
+//            POKE(0xD40E, 0x80 | 0x40);
         }
+
     }
 }
 
 void disableConsole()
 {
-    switch(gfxState.mode)
+    switch(gfxState.mode ^ GRAPHICS_CONSOLE_EN)
     {
         case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
             break;
         case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
-        case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
         case GRAPHICS_9:
-        case GRAPHICS_9_CONSOLE:
         case GRAPHICS_10:
         case GRAPHICS_11:
         {
-            DLDef newDl;
-
             gfxState.mode &= ~GRAPHICS_CONSOLE_EN;
 
-            makeDisplayList(gfxState.mode, &gfxState.buffer, &newDl);
-            OS.sdlst = newDl.address;
+            makeDisplayList(gfxState.mode, &gfxState.buffer, &gfxState.dl);
+            //OS.sdlst = newDl.address;
+//            POKEW(SDLSTL, gfxState.dl.address);
 
-            freeDisplayList(&gfxState.dl);
-            gfxState.dl = newDl;
-            // freeDisplayList(&gfxState.dl);
-            // makeDisplayList(gfxState.mode, &gfxState.buffer, &gfxState.dl);
-            // OS.sdlst = gfxState.dl.address;
+            //freeDisplayList(&gfxState.dl);
+            //gfxState.dl = newDl;
+
+            //ANTIC.nmien = 0x40; //= NMI_STATE;
+//            POKE(0xD40E, 0x40);
+//            POKEW(0x200, 0xE7B3);
+            //OS.vdslst = VDSLIST_STATE;
         }
-    }    
+    }
 }
 
 void setGraphicsMode(byte mode, byte keep)
 {
+    if(mode == gfxState.mode)
+        return;
+
     if(!keep)
     {
         // free any current mode
-        freeDisplayList(&gfxState.dl);
+        //freeDisplayList(&gfxState.dl);
         freeSegmentedMemory(&gfxState.buffer);
 
         // 
         makeGraphicsDef(mode, &gfxState);
     }
 
-    //if(mode == gfxState.mode)
-    //    return;
-
     #ifdef DEBUG_GRAPHICS
     cprintf("%p %p\n\r", gfxState.dl.address, gfxState.buffer.start);
     cgetc();
     #endif
 
-    ANTIC.nmien = NMI_STATE;
-    OS.vdslst = VDSLIST_STATE;
+#if 0
     OS.color1 = 14;         // Color maximum luminance
     OS.color2 = 0;          // Background black
 
@@ -443,6 +456,7 @@ void setGraphicsMode(byte mode, byte keep)
             OS.gprior = ORG_GPRIOR | GFX_11;   // Enable GTIA   
         break;
     }
+#endif
 
     gfxState.mode = mode;
 }

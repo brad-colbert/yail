@@ -24,35 +24,40 @@ void* malloc_constrianed(size_t size, size_t fence)
     // If so, free it and then reallocate based on the delta to make the
     // memory go to the fence.  Then allocate again which should be off
     // the fence and free the filler.
-    byte* filler = malloc(size);
-    unsigned end = (unsigned)filler + size;
-    unsigned pre_fence = ((unsigned)filler / fence) * fence;
-    unsigned post_fence = pre_fence + fence;
+    void* mem = malloc(size);
+    void* boundMem = NULL;
+    void* filler = NULL;
+    size_t fillerSize = 0;
 
-    //cprintf("%p : %p : %p ==> %p\n\r", pre_fence, filler, post_fence, filler + size);
-
-    if(end > post_fence)
+    while((unsigned)mem % fence)
     {
-        // get the diff
-        byte* mem;
-        unsigned to_post_fence = post_fence - (unsigned)filler;
-        to_post_fence -= 4;
+        boundMem = nextBoundary(mem, fence);
+        fillerSize = (size_t)boundMem - (size_t)mem;
+
+        free(mem);
+
+        if(fillerSize)
+        {
+            if(fillerSize < 5)
+                filler = malloc(fillerSize + fence - 4); // malloc overhead
+            else
+                filler = malloc(fillerSize - 4);
+        }
+
+        mem = malloc(size);
+
         free(filler);
-        filler = malloc(to_post_fence);
-        //cprintf("*** (%02x) %p : %p : %p ==> %p\n\r", to_post_fence, pre_fence, filler, post_fence, filler + to_post_fence);
 
-        // Allocate the unfenced mem
-        mem = calloc(1, size);
-
-        // Free the filler
-        free(filler);
-
-        filler = mem;
-
-        //cprintf("%p : %p : %p ==> %p\n\r", pre_fence, filler, post_fence, filler + size);
+        #ifdef DEBUG_MEMORY_CODE
+        cprintf("%p -> %p %d\n\r", filler, mem, fillerSize);
+        #endif
     }
 
-    return filler;
+    #ifdef DEBUG_MEMORY_CODE
+    cgetc();
+    #endif
+
+    return mem;
 }
 
 #if 0
@@ -61,7 +66,7 @@ void* aligned_malloc(size_t required_bytes, size_t alignment)
     void* p1; // original block
     void** p2; // aligned block
     int offset = alignment - 1 + sizeof(void*);
-    if ((p1 = (void*)calloc(required_bytes + offset, 1)) == NULL)
+    if ((p1 = (void*)malloc(required_bytes + offset)) == NULL)
     {
        return NULL;
     }
@@ -76,7 +81,7 @@ void aligned_free(void *p)
 }
 #endif
 
-#ifdef DEBUG_MEMORY_CODE
+#if 1//def DEBUG_MEMORY_CODE
 void printMemSegs(const MemSegs* memsegs)
 {
     byte i = 0;
@@ -90,6 +95,38 @@ void printMemSegs(const MemSegs* memsegs)
 #define MALLOC_OVERHEAD 4
 size_t allocSegmentedMemory(size_t block_size, size_t num_blocks, size_t boundary, MemSegs* memsegs)
 {
+    size_t size = block_size * num_blocks;
+    size_t waste = size / boundary;
+    void* next_seg = NULL;
+
+    memsegs->num = 0;
+    
+    size += waste * block_size;
+
+    memsegs->size = size;
+    memsegs->start = malloc(size);
+    memsegs->segs[0].addr = memsegs->start;
+    memsegs->end = (void*)((size_t)memsegs->segs[0].addr + size);
+
+    
+    next_seg = nextBoundary(memsegs->start, boundary);
+    memsegs->segs[0].size = (size_t)next_seg - (size_t)memsegs->segs[0].addr;
+    memsegs->segs[0].block_size = block_size;
+    ++memsegs->num;
+
+    while((memsegs->num < MAX_NUM_SEGS) && (next_seg < memsegs->end))
+    {
+        memsegs->segs[memsegs->num].addr = next_seg;
+        next_seg = nextBoundary(memsegs->segs[memsegs->num].addr, boundary);
+        if(next_seg >= memsegs->end)
+            next_seg = memsegs->end;
+        memsegs->segs[memsegs->num].size = (size_t)next_seg - (size_t)memsegs->segs[memsegs->num].addr;
+        memsegs->segs[memsegs->num].block_size = block_size;
+        ++memsegs->num;
+    }
+
+
+    #if 0
     unsigned len = block_size * num_blocks;
     void* mem = NULL;
     void* mem_orig = NULL;
@@ -105,7 +142,7 @@ size_t allocSegmentedMemory(size_t block_size, size_t num_blocks, size_t boundar
     clrscr();
     #endif
 
-    while(blocks_used < num_blocks)
+    while((memsegs->num < MAX_NUM_SEGS) && (blocks_used < num_blocks))
     {
         mem = calloc(1, len);
 
@@ -126,6 +163,9 @@ size_t allocSegmentedMemory(size_t block_size, size_t num_blocks, size_t boundar
         }
 
         mem = realloc(mem, mem_resize);
+        if(!mem)
+            break;
+
         mem_blocks = mem_resize / block_size;
         blocks_used += mem_blocks;
         blocks_rem = num_blocks - blocks_used;
@@ -147,6 +187,7 @@ size_t allocSegmentedMemory(size_t block_size, size_t num_blocks, size_t boundar
     }
     memsegs->end = (void*)((unsigned)mem + mem_resize);
     memsegs->size = (unsigned)memsegs->end - (unsigned)memsegs->start;
+    #endif
     
     #ifdef DEBUG_MEMORY_CODE
     printMemSegs(memsegs);
@@ -168,10 +209,13 @@ typedef struct _MemSegs
 */
 void freeSegmentedMemory(MemSegs* memsegs)
 {
+    /*
     byte i = 0;
     for(; i < MAX_NUM_SEGS; i++)
         if(memsegs->segs[i].size > 0)
             free(memsegs->segs[i].addr);
+    */
+    free(memsegs->segs[0].addr);
 
     memset(memsegs, 0, sizeof(MemSegs));
 }

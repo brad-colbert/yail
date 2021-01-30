@@ -175,32 +175,8 @@ void process_command(byte ntokens)
     if(strncmp(tokens[0], "save", 4) == 0)
     {
         if(ntokens > 1)
-        {
             saveFile(tokens[1]);
-        }
-        /*
-        if(ntokens > 1)
-        {
-            struct dl_store dl_mem[MAX_N_DL];
-            struct dli_store dli_mem[MAX_N_DLI];
-            struct mem_store gfx_mem[MAX_N_MEM];
 
-            memset(&dl_mem, 0, sizeof(dl_mem));
-            memset(&dli_mem, 0, sizeof(dli_mem));
-            memset(&gfx_mem, 0, sizeof(gfx_mem));
-
-            // Define the DL description
-            dl_mem[0] = image_dl_store;
-
-            // Define the DLI description
-
-            // Define the MEM descriptions
-            gfx_mem[0].size = 0x2800;
-            gfx_mem[0].mem = (void*)MY_SCRN_MEM;
-
-            save_file(tokens[1], dl_mem, dli_mem, gfx_mem);
-        }
-        */
         else
         {
             gotoxy(0,0);

@@ -75,7 +75,7 @@ void saveFile(const char filename[])
         write(fd, &b, 1);
 
         // Write the graphics mode
-        b = gfxState.mode;
+        b = gfxState.mode & ~GRAPHICS_CONSOLE_EN;
         write(fd, &b, 1);
 
         // Write the DLs
@@ -132,6 +132,11 @@ byte loadFile(const char filename[])
                 size_t dest_buff_size = (seg->size / seg->block_size) * seg->block_size;
                 size_t dest_used = 0;
 
+    clrscr();
+    gotoxy(0,0);
+    printMemSegs(&gfxState.buffer);
+    cgetc();
+
                 // Read the version #
                 n = read(fd, (void*)&maj, 1);
                 n = read(fd, (void*)&min, 1);
@@ -152,7 +157,10 @@ byte loadFile(const char filename[])
                 if(n < 1)
                     break;
 
-                // setGraphicsMode(gfx_mode, 0);
+                setGraphicsMode(gfx_mode, 0);
+                #ifdef DEBUG_FILELOAD
+                enableConsole();
+                #endif
 
                 #ifdef DEBUG_FILELOAD
                 gotoxy(0,0);clrscr();
@@ -227,10 +235,28 @@ byte loadFile(const char filename[])
                                 cgetc();
                                 #endif
 
-                                if(size > dest_buff_size - dest_used)
+                                if(size < dest_buff_size - dest_used)
                                 {
                                     #ifdef DEBUG_FILELOAD
-                                    cprintf("%d: %d > %d - %d\n\r", segCount, size, dest_buff_size, dest_used);
+                                    cprintf("%d < %d - %d\n\r", size, dest_buff_size, dest_used);
+                                    cgetc();
+                                    #endif
+
+                                    n = read(fd, (void*)((size_t)seg->addr + dest_used), size);
+                                    if(n < 1)
+                                        break;
+
+                                    #ifdef DEBUG_FILELOAD
+                                    cprintf("Wrote %db to %p (%d)\n\r", n, (void*)((size_t)seg->addr + dest_used), size);
+                                    #endif
+
+                                    dest_used += n;
+                                }
+                                else
+                                {
+                                    #ifdef DEBUG_FILELOAD
+                                    cprintf("%d: %d >= %d - %d\n\r", segCount, size, dest_buff_size, dest_used);
+                                    cgetc();
                                     #endif
 
                                     n = read(fd, (void*)((size_t)seg->addr + dest_used), dest_buff_size - dest_used);
@@ -250,22 +276,7 @@ byte loadFile(const char filename[])
                                     cprintf("New seg[%d] %p of %d\n\r", segCount, seg->addr, dest_buff_size);
                                     #endif
                                 }
-                                else
-                                {
-                                    #ifdef DEBUG_FILELOAD
-                                    cprintf("%d <= %d - %d\n\r", size, dest_buff_size, dest_used);
-                                    #endif
 
-                                    n = read(fd, (void*)((size_t)seg->addr + dest_used), size);
-                                    if(n < 1)
-                                        break;
-
-                                    #ifdef DEBUG_FILELOAD
-                                    cprintf("Wrote %db to %p (%d)\n\r", n, (void*)((size_t)seg->addr + dest_used), size);
-                                    #endif
-
-                                    dest_used += n;
-                                }
 
                                 size -= n;                                
 

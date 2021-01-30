@@ -24,6 +24,12 @@ extern char* console_buff;
 int main(int argc, char* argv[])
 {
     byte i = 0;
+
+    clrscr();
+    // Initialize everything
+    memset(&gfxState, 0, sizeof(GfxDef));
+    gfxState.dl.address = NULL;
+
     saveCurrentGraphicsState();
     setGraphicsMode(GRAPHICS_8, 0);
 
