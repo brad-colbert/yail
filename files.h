@@ -39,25 +39,5 @@ struct mem_store
 byte imageFileType(const char filename[]);
 byte loadFile(const char filename[]);
 void saveFile(const char filename[]);
-#if 0
-// filename - The name of the file to save the image.
-// gfx_mode - The graphics mode to set when displaying the image.
-// dl_mem - An array of pointers to the display lists
-// dli_mem - An array of pointers to DLI code.
-// gfx_mem - An array of graphics memory locations
-// set_graphics_mode - If set to 1, set the gfx mode after loading it, else don't
-void save_file(const char filename[],
-               struct dl_store dl_mem[MAX_N_DL],
-               struct dli_store dli_mem[MAX_N_DLI],
-               struct mem_store gfx_mem[MAX_N_MEM]);
-byte load_file(const char filename[],
-               byte* gfx_mode,
-               struct dl_store dl_mem[MAX_N_DL],
-               struct dli_store dli_mem[MAX_N_DLI],
-               struct mem_store gfx_mem[MAX_N_MEM],
-               byte set_graphics_mode);
-
-byte image_file_type(const char filename[]);
-#endif
 
 #endif // FILES_H

@@ -117,7 +117,6 @@ int readHeader(int fd)
 // Reads a file from fb and writes numbytes of it into dmem.
 // Assumes destination will be Gfx8 formatted
 void readPBM(int fd)
-//void readPBMIntoGfx8(int fd)
 {
     unsigned numbytes = 0;
     unsigned numread = 0;
@@ -144,45 +143,18 @@ void readPBM(int fd)
 // Assumes destination will be Gfx9 formatted
 void readPGM(int fd)
 {
-    #if 0
-    byte segcount = 0;
-    while(gfxState.buffer.segs[segcount].size > 0)
-    {
-        MemSeg* seg = &gfxState.buffer.segs[segcount];
-        size_t blocks_in_seg = seg->size / seg->block_size;
-
-        memset(seg->addr, 0x33, seg->block_size);
-        memset((size_t)seg->addr + ((blocks_in_seg-1)*seg->block_size), 0x55, seg->block_size);
-        ++segcount;
-    }
-    #endif
-
     unsigned numbytes = 0;
     unsigned count = 0;
     byte segcount = 0;
-    //int i;
-
-    // clrscr();
-    // gotoxy(0,0);
     
     memset(buff, 0, 255);
     readHeader(fd);
 
     numbytes = w * h;
 
-    // cprintf("%d ", numbytes);
-    // cgetc();
-
     memset(buff, 0, 255);
     count = readLine(fd);
     mxp = 0;
-
-    // clrscr();
-    // gotoxy(0,0);
-    // cprintf("%d %s ", count, buff);
-    // cgetc();
-    // clrscr();
-    // gotoxy(0,0);
 
     // Parse the maximum pixel value
     {
@@ -194,9 +166,6 @@ void readPGM(int fd)
         mxp += pow10(digit, count - (i+1));
     }
     } 
-
-    // cprintf("%d ", mxp);
-    // cgetc();
 
     while(gfxState.buffer.segs[segcount].size > 0)
     {

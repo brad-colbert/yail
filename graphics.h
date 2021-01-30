@@ -79,11 +79,4 @@ void disableConsole(void);
 
 void printDList(const char* name, DLDef* dlInfo);
 
-#if 0
-// Prototypes
-void set_graphics(byte mode);
-void set_graphics_console(byte enable);
-void graphics_clear(void);
-#endif
-
 #endif // GRAPHICS_H

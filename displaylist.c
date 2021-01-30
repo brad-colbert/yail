@@ -141,9 +141,6 @@ unsigned makeDisplayList(void* dl_location, DLDef dl[], byte n, struct dl_store*
     byte* dl_mem = dl_location;
     int idx;
 
-    //cprintf("DL = %p\n\r", dl_location);
-    //cgetc();
-
     // Set new DL
     for(idx = 0; idx < n; idx++)
     {
@@ -213,10 +210,6 @@ unsigned makeDisplayList(void* dl_location, DLDef dl[], byte n, struct dl_store*
 
     dls->size = (unsigned)(dl_mem - (byte*)dl_location);
     dls->mem = dl_location;
-
-    // cgetc();
-    // print_dlist("DL", dl_location);
-    // cgetc();
 
     return dls->size;
 }
