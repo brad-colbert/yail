@@ -29,9 +29,11 @@ int main(int argc, char* argv[])
     // Initialize everything
     memset(&gfxState, 0, sizeof(GfxDef));
     gfxState.dl.address = NULL;
+    gfxState.mode = 0xFF;
 
     saveCurrentGraphicsState();
     setGraphicsMode(GRAPHICS_8, 0);
+    clearFrameBuffer();
 
     /* Test background
     while(gfxState.buffer.segs[i].size > 0)
@@ -43,6 +45,8 @@ int main(int argc, char* argv[])
 
     enableConsole();
     console_update();
+    disableConsole();
+    setGraphicsMode(GRAPHICS_0, 0);
 
     restoreGraphicsState();
 

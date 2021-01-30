@@ -132,10 +132,12 @@ byte loadFile(const char filename[])
                 size_t dest_buff_size = (seg->size / seg->block_size) * seg->block_size;
                 size_t dest_used = 0;
 
-    clrscr();
-    gotoxy(0,0);
-    printMemSegs(&gfxState.buffer);
-    cgetc();
+                #ifdef DEBUG_FILELOAD
+                clrscr();
+                gotoxy(0,0);
+                printMemSegs(&gfxState.buffer);
+                cgetc();
+                #endif
 
                 // Read the version #
                 n = read(fd, (void*)&maj, 1);

@@ -73,8 +73,8 @@ void disable_9_dli(void) {
 
 void saveCurrentGraphicsState(void)
 {
-    ORG_SDLIST = PEEK(SDLSTL); //OS.sdlst;
-    VDSLIST_STATE = OS.vdslst;
+    ORG_SDLIST = OS.sdlst; //PEEKW(SDLSTL);
+    VDSLIST_STATE = OS.vdslst; //PEEKW(VDSLST);
     NMI_STATE = ANTIC.nmien;
     ORG_GPRIOR = OS.gprior;       // Save current priority states
     ORG_COLOR1 = OS.color1;
@@ -86,7 +86,7 @@ void restoreGraphicsState(void)
 {
     ANTIC.nmien = NMI_STATE; //POKE(NMIEN, NMI_STATE);
     OS.vdslst = VDSLIST_STATE; //POKEW(VDSLST, VDSLIST_STATE);
-    POKEW(SDLSTL, ORG_SDLIST); //OS.sdlst = ORG_SDLIST;
+    OS.sdlst = ORG_SDLIST; // POKEW(SDLSTL, ORG_SDLIST);
     OS.color1 = ORG_COLOR1; //POKE(COLOR1, ORG_COLOR1);
     OS.color2 = ORG_COLOR2; //POKE(COLOR2, ORG_COLOR2);
     OS.gprior = ORG_GPRIOR; //POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
@@ -334,7 +334,7 @@ void makeGraphicsDef(byte mode, GfxDef* gfxInfo)
             allocSegmentedMemory(GFX_8_MEM_LINE, GFX_8_LINES, 4096, &gfxInfo->buffer);
     }
 
-//    makeDisplayList(mode, &gfxInfo->buffer, &gfxInfo->dl);
+    makeDisplayList(mode, &gfxInfo->buffer, &gfxInfo->dl);
 }
 
 void enableConsole()
@@ -349,7 +349,8 @@ void enableConsole()
 
             makeDisplayList(gfxState.mode, &gfxState.buffer, &gfxState.dl);
             //OS.sdlst = gfxState.dl;
-//            POKEW(SDLSTL, gfxState.dl.address);
+            POKEW(SDLSTL, gfxState.dl.address);
+            POKE(0xD40E, 0x40);
 
             //freeDisplayList(&gfxState.dl);
             //gfxState.dl = newDl;
@@ -363,15 +364,15 @@ void enableConsole()
 
             makeDisplayList(gfxState.mode, &gfxState.buffer, &gfxState.dl);
             //OS.sdlst = gfxState.dl;
-//            POKEW(SDLSTL, gfxState.dl.address);
+            POKEW(SDLSTL, gfxState.dl.address);
 
             //freeDisplayList(&gfxState.dl);
             //gfxState.dl = newDl;
 
             //OS.vdslst = disable_9_dli;
             //ANTIC.nmien = 0x80 | 0x40;
-//            POKEW(0x200, disable_9_dli);
-//            POKE(0xD40E, 0x80 | 0x40);
+            POKEW(VDSLST, disable_9_dli);
+            POKE(0xD40E, 0x80 | 0x40);
         }
 
     }
@@ -392,14 +393,14 @@ void disableConsole()
 
             makeDisplayList(gfxState.mode, &gfxState.buffer, &gfxState.dl);
             //OS.sdlst = newDl.address;
-//            POKEW(SDLSTL, gfxState.dl.address);
+            POKEW(SDLSTL, gfxState.dl.address);
 
             //freeDisplayList(&gfxState.dl);
             //gfxState.dl = newDl;
 
             //ANTIC.nmien = 0x40; //= NMI_STATE;
-//            POKE(0xD40E, 0x40);
-//            POKEW(0x200, 0xE7B3);
+            POKE(0xD40E, 0x40);
+            POKEW(VDSLST, VDSLIST_STATE);
             //OS.vdslst = VDSLIST_STATE;
         }
     }
@@ -410,7 +411,7 @@ void setGraphicsMode(byte mode, byte keep)
     if(mode == gfxState.mode)
         return;
 
-    if(!keep)
+    if(!gfxState.buffer.size)// !keep)
     {
         // free any current mode
         //freeDisplayList(&gfxState.dl);
@@ -425,15 +426,15 @@ void setGraphicsMode(byte mode, byte keep)
     cgetc();
     #endif
 
-#if 0
     OS.color1 = 14;         // Color maximum luminance
     OS.color2 = 0;          // Background black
 
     switch(mode)
     {
         case GRAPHICS_0:
-            OS.sdlst = gfxState.dl.address;
-            OS.gprior = ORG_GPRIOR;
+            OS.sdlst = gfxState.dl.address; //ORG_SDLIST;
+            ANTIC.nmien = NMI_STATE;
+            OS.vdslst = VDSLIST_STATE;
         break;
         default:
             OS.sdlst = gfxState.dl.address;
@@ -443,6 +444,7 @@ void setGraphicsMode(byte mode, byte keep)
     // Set graphics mode specifc things
     switch(mode & ~GRAPHICS_CONSOLE_EN)
     {
+        case GRAPHICS_0:
         case GRAPHICS_8:
             OS.gprior = ORG_GPRIOR; // Turn off GTIA
         break;
@@ -456,19 +458,13 @@ void setGraphicsMode(byte mode, byte keep)
             OS.gprior = ORG_GPRIOR | GFX_11;   // Enable GTIA   
         break;
     }
-#endif
 
     gfxState.mode = mode;
 }
 
 void clearFrameBuffer()
 {
-    byte i = 0;
-    while(gfxState.buffer.segs[i].size > 0)
-    {
-        memset(gfxState.buffer.segs[i].addr, 0x0, gfxState.buffer.segs[i].size);
-        ++i;
-    }
+    memset(gfxState.buffer.start, 0, gfxState.buffer.size);
 }
 
 

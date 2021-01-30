@@ -110,7 +110,7 @@ size_t allocSegmentedMemory(size_t block_size, size_t num_blocks, size_t boundar
 
     
     next_seg = nextBoundary(memsegs->start, boundary);
-    memsegs->segs[0].size = (size_t)next_seg - (size_t)memsegs->segs[0].addr;
+    memsegs->segs[0].size = (((size_t)next_seg - (size_t)memsegs->segs[0].addr)/block_size)*block_size;
     memsegs->segs[0].block_size = block_size;
     ++memsegs->num;
 

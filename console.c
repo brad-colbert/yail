@@ -15,7 +15,7 @@
 #include <string.h>
 
 // Defines
-#define CONSOLE_LINES 4
+#define CONSOLE_LINES 5
 #define CONSOLE_HIDDEN 0
 #define CONSOLE_SHOWN 1
 #define MAX_LINE_LEN 40
@@ -130,7 +130,7 @@ void process_command(byte ntokens)
             switch(tokens[1][0])
             {
                 case 16:
-                    setGraphicsMode(GRAPHICS_0, 1);
+                    setGraphicsMode(GRAPHICS_0, 0);
                     break;
                 case 24:
                     setGraphicsMode(GRAPHICS_8, 1);
