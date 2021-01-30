@@ -261,10 +261,10 @@ void console_update(void)
 
                 if(ntokens > 0)
                 {
-                    process_command(ntokens);
-
                     console_state = FALSE;
                     disableConsole();
+
+                    process_command(ntokens);
                 }
                 else
                 {
