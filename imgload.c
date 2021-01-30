@@ -30,16 +30,21 @@ int main(int argc, char* argv[])
     gfxState.mode = 0xFF;        // make sure the mode get's set
 
     saveCurrentGraphicsState();
-    setGraphicsMode(GRAPHICS_8, 0);
+    setGraphicsMode(GRAPHICS_8);
     clearFrameBuffer();
 
-    // Start user input.
-    enableConsole();
+    if(argc > 1)
+        loadFile(argv[1]);
+
+    else
+        // Start user input.
+        enableConsole();
+
     console_update();
     disableConsole();
 
     // Restore the graphics state back to the starting state.
-    setGraphicsMode(GRAPHICS_0, 0);
+    setGraphicsMode(GRAPHICS_0);
     restoreGraphicsState();
     clrscr();
 

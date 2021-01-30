@@ -184,7 +184,7 @@ void generateDisplayList(const MemSegs* buffInfo, DLDef* dlInfo)
 
             if(IS_LMS(b))
             {
-                *((unsigned*)dlCmd) = lms_addr;  // Add the address
+                *((unsigned*)dlCmd) = (unsigned)lms_addr;  // Add the address
                 dlCmd += 2;
             }
         }
@@ -388,12 +388,12 @@ void disableConsole()
     }
 }
 
-void setGraphicsMode(byte mode, byte keep)
+void setGraphicsMode(byte mode)
 {
     if(mode == gfxState.mode)
         return;
 
-    if(!gfxState.buffer.size)// !keep)
+    if(!gfxState.buffer.size)
     {
         // don't free the display list memory.  It will be persistent.
 

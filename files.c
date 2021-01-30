@@ -159,7 +159,8 @@ byte loadFile(const char filename[])
                 if(n < 1)
                     break;
 
-                setGraphicsMode(gfx_mode, 0);
+                disableConsole();
+                setGraphicsMode(gfx_mode);
                 #ifdef DEBUG_FILELOAD
                 enableConsole();
                 #endif
@@ -314,11 +315,13 @@ byte loadFile(const char filename[])
                 switch(file_type)
                 {
                     case FILETYPE_PBM:
-                        setGraphicsMode(GRAPHICS_8, 0);
+                        disableConsole();
+                        setGraphicsMode(GRAPHICS_8);
                         readPBM(fd);
                         break;
                     case FILETYPE_PGM:
-                        setGraphicsMode(GRAPHICS_9, 0);
+                        disableConsole();
+                        setGraphicsMode(GRAPHICS_9);
                         readPGM(fd);
                         break;
                 };

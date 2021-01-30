@@ -70,7 +70,7 @@ void restoreGraphicsState(void);
 void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo);
 void makeGraphicsDef(byte mode, GfxDef* gfxInfo);
 
-void setGraphicsMode(byte mode, byte keep);
+void setGraphicsMode(byte mode);
 
 void clearFrameBuffer(void);
 
