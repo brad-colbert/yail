@@ -43,7 +43,7 @@ void reset_console(void)
 #define SEARCHING_FOR_TOKEN 1
 #define START_OF_TOKEN 2
 #define END_OF_TOKEN 3
-byte get_tokens(byte endx)
+byte get_tokens(byte* buff, byte endx)
 {
     byte count = 0;
     byte state = SEARCHING_FOR_TOKEN;
@@ -53,15 +53,15 @@ byte get_tokens(byte endx)
         switch(state)
         {
             case SEARCHING_FOR_TOKEN:
-                if(console_buff[i] != 0x0)
+                if(buff[i] != 0x0)
                 {
-                    tokens[count] = &console_buff[i];
+                    tokens[count] = &buff[i];
                     state = START_OF_TOKEN;
                     ++count;
                 }
                 break;
             case START_OF_TOKEN:
-                if(console_buff[i] == 0x0)
+                if(buff[i] == 0x0)
                 {
                     state = SEARCHING_FOR_TOKEN;
                 }
@@ -85,8 +85,19 @@ void fix_chars(char* buff)
 {
     byte i;
     for(i=0;i<MAX_LINE_LEN;++i)
+    {
+        if(buff[i] <= 63)
+            buff[i] += 32;
+        /*
         if(buff[i] == 0x0E)   // Change _ to .
             buff[i] = 0x2E;
+        else if(buff[i] == 26) // :
+            buff[i] = 58;
+        else if(buff[i] > 15 && buff[i] < 26)
+            buff[i] += 32;
+            */
+    }
+        
 }
 
 void process_command(byte ntokens)
@@ -130,21 +141,21 @@ void process_command(byte ntokens)
             switch(tokens[1][0])
             {
                 case 16:
-                    setGraphicsMode(GRAPHICS_0, 0);
+                    setGraphicsMode(GRAPHICS_0);
                     break;
                 case 24:
-                    setGraphicsMode(GRAPHICS_8, 1);
+                    setGraphicsMode(GRAPHICS_8);
                     break;
                 case 25:
-                    setGraphicsMode(GRAPHICS_9, 1);
+                    setGraphicsMode(GRAPHICS_9);
                     break;
                 case 17:
                     switch(tokens[1][1])
                     {   case 16:
-                            setGraphicsMode(GRAPHICS_10, 1);
+                            setGraphicsMode(GRAPHICS_10);
                             break;
                         case 17:
-                            setGraphicsMode(GRAPHICS_11, 1);
+                            setGraphicsMode(GRAPHICS_11);
                             break;
                     }
                     break;
@@ -214,26 +225,27 @@ void console_update(void)
             case CH_ENTER:
             {
                 // process the tokens
+                #define WORKING_BUFF_SIZE 80
+                byte buff[80];  // two lines of data
                 byte ntokens = 0;
 
+                memcpy(buff, console_buff, WORKING_BUFF_SIZE);
+
                 #ifdef DEBUG_CONSOLE
-                gotoxy(0,3);
-                cprintf("%p", console_buff);
+                gotoxy(0,1);
+                cprintf("%s\n\r", console_buff);
+                cprintf("%s", buff);
+                cgetc();
                 #endif
 
                 cursor(0);
 
-                ntokens = get_tokens(x + 1);
+                ntokens = get_tokens(buff, x + 1);
 
                 #ifdef DEBUG_CONSOLE
                 gotoxy(0,4);
                 cprintf("%d  ", ntokens);
-                gotoxy(0,5);
-                cprintf("%d\n\r", ntokens);
                 #endif
-
-                //memset(console_buff, 0, 40);
-                //gotoxy(0,0);
 
                 #ifdef DEBUG_CONSOLE
                 // For debugging purposes, should display below the input
@@ -244,18 +256,21 @@ void console_update(void)
                     //memcpy(&line[40], line, 40);
 
                     cclearxy(0, 4, 40);
-                    gotoxy(0,4);
-                    for(i = 0; i < x; i++)
-                        cprintf("%02x ", line[i]);
+                    // gotoxy(0,4);
+                    // for(i = 0; i < x; i++)
+                    //     cprintf("%02x ", line[i]);
 
-                    gotoxy(0,5);
+                    #define TOKEN_DBG_LINE 1
+                    gotoxy(0,TOKEN_DBG_LINE);
                     cprintf("%d\n\r", ntokens);
                     for(i = 0; i < ntokens; i++)
                     {
-                        cclearxy(0, i+5, 40);
-                        gotoxy(0,i+5);
+                        cclearxy(0, i+TOKEN_DBG_LINE, 40);
+                        gotoxy(0,i+TOKEN_DBG_LINE);
                         cprintf("%d: %s", i, tokens[i]);
                     }
+
+                    cgetc();
                 }
                 #endif
 

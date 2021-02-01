@@ -70,7 +70,7 @@ void restoreGraphicsState(void);
 void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo);
 void makeGraphicsDef(byte mode, GfxDef* gfxInfo);
 
-void setGraphicsMode(byte mode, byte keep);
+void setGraphicsMode(byte mode);
 
 void clearFrameBuffer(void);
 
@@ -78,12 +78,5 @@ void enableConsole(void);
 void disableConsole(void);
 
 void printDList(const char* name, DLDef* dlInfo);
-
-#if 0
-// Prototypes
-void set_graphics(byte mode);
-void set_graphics_console(byte enable);
-void graphics_clear(void);
-#endif
 
 #endif // GRAPHICS_H
