@@ -28,7 +28,7 @@
 #define GFX_11_MEM_LINE 40
 
 // Lines per mode
-#define GFX_0_LINES 26
+#define GFX_0_LINES 24
 #define GFX_8_LINES 220
 #define GFX_9_LINES 220
 #define GFX_10_LINES 220

@@ -1,5 +1,10 @@
 // Copyright (C) 2021 Brad Colbert
 
+//#include "nio.h"
+
+
+#if 1
+
 #include "console.h"
 #include "graphics.h"
 #include "files.h"
@@ -50,3 +55,4 @@ int main(int argc, char* argv[])
 
     return 0;
 }
+#endif

@@ -50,3 +50,23 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# Images
+*.yai
+*.jpg
+*.png
+*.jpeg
+*.pbm
+*.pgm
+image/
+.DS_Store
+
+# Disks
+*.atr
+
+# Execuatables
+*.xex
+*.exe
+
+#
+settings.json
