@@ -201,7 +201,7 @@ void generateDisplayList(const MemSegs* buffInfo, DLDef* dlInfo)
     // Finally clean up and shrink the memory down to the size of the DL
     dlInfo->size = (size_t)(dlCmd - (byte*)dlInfo->address);
 
-    #if 1 //def DEBUG_GRAPHICS
+    #ifdef DEBUG_GRAPHICS
     {
         int i;
         for(i = 0; i < dlInfo->size; ++i)
