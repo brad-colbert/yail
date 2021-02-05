@@ -1,3 +1,5 @@
+# Copyright (C) 2021 Brad Colbert
+
 import requests
 import re
 import json
@@ -8,6 +10,7 @@ import os
 from tqdm import tqdm
 import socket
 import threading
+import random
 
 bind_ip = '0.0.0.0'
 bind_port = 9999
@@ -17,7 +20,6 @@ server.bind((bind_ip, bind_port))
 server.listen(5)  # max backlog of connections
 
 print('Listening on {}:{}'.format(bind_ip, bind_port))
-
 
 logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
@@ -153,42 +155,46 @@ def convertToYai(image):
     im_matrix = np.array(gray_dither)
 
     im_values = im_matrix[:,:,0]
-    print(im_values.shape)
-    print(im_values)
-    print("\n")
+    # print(im_values.shape)
+    # print(im_values)
+    # print("\n")
 
     evens = im_values[:,::2]
-    print(evens)
-    print("\n")
+    # print(evens)
+    # print("\n")
 
     odds = im_values[:,1::2]
-    print(odds)
-    print("\n")
+    # print(odds)
+    # print("\n")
 
     evens_scaled = (evens >> 4) << 4 # np.zeros((220,40))
-    print(evens_scaled)
-    print("\n")
+    # print(evens_scaled)
+    # print("\n")
 
     odds_scaled =  (odds >> 4)
-    print(odds_scaled)
-    print("\n")
+    # print(odds_scaled)
+    # print("\n")
 
     combined = evens_scaled + odds_scaled
-    print(combined)
-    print("\n")
+    # print(combined)
+    # print("\n")
 
     combined_int = combined.astype('int8')
-    print(combined_int.shape)
-    print(combined_int.shape[0])
-    print(combined_int)
-    print("\n")
+    # print(combined_int.shape)
+    # print(combined_int.shape[0])
+    # print(combined_int)
+    # print("\n")
+
+    ttlbytes = combined_int.shape[0] * combined_int.shape[1]
 
     image_yai = bytearray()
     image_yai += bytes([1, 1, 0])  # version
     image_yai += bytes([4])        # Gfx 9
     image_yai += bytes([3])        # MemToken
-    image_yai += struct.pack("<H",im_values.shape[0]*im_values.shape[1]) #, height x width
+    image_yai += struct.pack("<H",combined_int.shape[0]*combined_int.shape[1]) #, height x width
     image_yai += bytearray(combined_int)  # image
+
+    print('Size: %d x %d = %d (%d)' % (combined_int.shape[0], combined_int.shape[1], ttlbytes, len(image_yai)))
 
     return image_yai
 
@@ -252,7 +258,7 @@ def saveImage(url, pathname):
                 # update the progress bar manually
                 progress.update(len(data))
 
-        #saveToYai(filepath)
+        saveToYai(filepath)
 
     except Exception as e:
         print('Exception:', e)
@@ -301,13 +307,14 @@ def streamYai(url, client):
         image_bytes_io = BytesIO()
         image_bytes_io.write(image_data)
         image = Image.open(image_bytes_io)
-        image.show()
+        #image.show()
         #input("Press Enter to continue...")
 
         image_yai = convertToYai(image)
 
-        #sent = 0
-        #while sent < len(image_yai):
+        # Print image as hex
+        #res = ' '.join(format(x, '02x') for x in image_yai) 
+        #print(str(res))
         client.sendall(image_yai)
         return True
 
@@ -318,10 +325,10 @@ def streamYai(url, client):
 def handle_client_connection(client_socket):
     try:
         done = False
+        url_idx = 0
         while not done:
             request = client_socket.recv(1024)
             r_string = request.decode('UTF-8')
-            # request = str(request)
             tokens = r_string.rstrip(' \r\n').split(' ')
             print(tokens)
 
@@ -330,24 +337,22 @@ def handle_client_connection(client_socket):
 
             elif tokens[0] == 'search':
                 urls = search(' '.join(tokens[1:]))
-                for url in urls:
-                    print('Trying', url)
-                    status = streamYai(url, client_socket)
-                    if status:
-                        #input("Press Enter to continue...")
-                        # wait for a command from the client
-                        #print('Sent', client_socket.send(bytes(b'DONE!')))
-                        time.sleep(1)
-                        request = client_socket.recv(1024)
-                        r_string = request.decode('UTF-8')
-                        command = r_string.rstrip(' \r\n')
-                        print('RECV:', command)
-                        if command == 'stop':
-                            client_socket.close()
-                            return
-                    else:
-                        print('Status', status)
-                        input("Press Enter to continue...")
+                url_idx = random.randint(0, len(urls)-1)
+                url = urls[url_idx]
+                while not streamYai(url, client_socket):
+                    print('Problem with image trying another...')
+                    url_idx = random.randint(0, len(urls)-1)
+                    url = urls[url_idx]
+                    time.sleep(1)
+
+            elif tokens[0] == 'next':
+                url_idx = random.randint(0, len(urls)-1)
+                url = urls[url_idx]
+                while not streamYai(url, client_socket):
+                    print('Problem with image trying another...')
+                    url_idx = random.randint(0, len(urls)-1)
+                    url = urls[url_idx]
+                    time.sleep(1)
 
             else:
                 print('Received {}'.format(r_string.rstrip(' \r\n')))

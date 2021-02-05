@@ -246,10 +246,16 @@ ifneq ($(word 2,$(CONFIG)),)
   CONFIG := $(firstword $(CONFIG))
   $(info Using config file $(CONFIG) for linking)
 endif
+
+RMDIR = $(RM) -r
+DIR2ATR ?= dir2atr
+DISK     = imgload.atr
  
 .SUFFIXES:
 .PHONY: all test clean zap love
- 
+
+disk: $(DISK)
+
 all: $(PROGRAM)
  
 -include $(DEPENDS)
@@ -319,6 +325,7 @@ test: $(PROGRAM)
 	$(POSTEMUCMD)
  
 clean:
+  #$(call RMFILES,imgload.atr)
 	$(call RMFILES,$(OBJECTS))
 	$(call RMFILES,$(DEPENDS))
 	$(call RMFILES,$(REMOVES))
@@ -343,6 +350,18 @@ zap:
  
 love:
 	@echo "Not war, eh?"
+
+
+#	$(DIR2ATR) -S -b Dos25 $@ atr
+#	cp imgload atr/autorun.sys
+define ATR_WRITE_recipe
+cp $(file) atr/$(notdir $(file))
+endef # ATR_WRITE_recipe
+$(DISK): $(PROGRAM)
+	@mkdir atr
+	@$(foreach file,$(PROGRAM),$(ATR_WRITE_recipe))
+	$(DIR2ATR) -D -b DosXL230 $@ atr
+	@$(RMDIR) atr
 
 ###################################################################
 ###  Place your additional targets in the additional Makefiles  ###

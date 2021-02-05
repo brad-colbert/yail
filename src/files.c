@@ -159,8 +159,8 @@ byte loadFile(const char filename[])
                 if(n < 1)
                     break;
 
-                disableConsole();
                 setGraphicsMode(gfx_mode);
+                disableConsole();
                 #ifdef DEBUG_FILELOAD
                 enableConsole();
                 #endif

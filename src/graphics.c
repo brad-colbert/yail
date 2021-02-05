@@ -368,20 +368,20 @@ void enableConsole()
 
 void disableConsole()
 {
-    switch(gfxState.mode ^ GRAPHICS_CONSOLE_EN)
+    switch(gfxState.mode) // ^ GRAPHICS_CONSOLE_EN)
     {
         case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
             break;
-        case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
-        case GRAPHICS_9:
-        case GRAPHICS_10:
-        case GRAPHICS_11:
+        case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
+        case GRAPHICS_9_CONSOLE:
+        case GRAPHICS_10_CONSOLE:
+        case GRAPHICS_11_CONSOLE:
         {
-            gfxState.mode &= ~GRAPHICS_CONSOLE_EN;
+            gfxState.mode &= (byte)~GRAPHICS_CONSOLE_EN;
 
             makeDisplayList(gfxState.mode, &gfxState.buffer, &gfxState.dl);
-            //POKEW(SDLSTL, gfxState.dl.address);
-            OS.sdlst = gfxState.dl.address;
+            POKEW(SDLSTL, gfxState.dl.address);
+            //OS.sdlst = gfxState.dl.address;
 
             ANTIC.nmien = 0x40;
             OS.vdslst = VDSLIST_STATE;

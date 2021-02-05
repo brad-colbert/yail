@@ -1,5 +1,6 @@
 // Copyright (C) 2021 Brad Colbert
 
+#include "netimage.h"
 #include "readNetPBM.h"
 #include "graphics.h"
 #include "console.h"
@@ -31,8 +32,9 @@ char console_buff[GFX_0_MEM_LINE * CONSOLE_LINES];
 #else
 char* console_buff = 0x0;
 #endif
-char* tokens[] = { 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 5 tokens
+char* tokens[] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 tokens
 byte done = FALSE;
+char server[80] = { "N:TCP://192.168.1.116:9999/\"\0" };
 
 void reset_console(void)
 {
@@ -194,6 +196,37 @@ void process_command(byte ntokens)
             cprintf("ERROR: File not specified");
         }
     }
+
+    if(strncmp(tokens[0], "set", 3) == 0)
+    {
+        if(ntokens < 3)
+        {
+            gotoxy(0,0);
+            cprintf("ERROR: Must specify a setting and value");
+        }
+        else
+        {
+            if(strncmp(tokens[1], "server", 3) == 0)
+            {
+                strncpy(server, tokens[2], 79);
+            }
+        }
+    }
+
+    if(strncmp(tokens[0], "stream", 3) == 0)
+    {
+        if(ntokens < 2)
+        {
+            gotoxy(0,0);
+            cprintf("ERROR: Genre not specified");
+        }
+        else
+        {
+            loadImage(server, &tokens[1]);
+        }
+    }
+
+
 }
 
 void console_update(void)
@@ -285,15 +318,14 @@ void console_update(void)
                 {
                     if(console_state)
                     {
-                        disableConsole();
                         console_state = FALSE;
+                        disableConsole();
                     }
                     else
                     {
-                        enableConsole();
                         console_state = TRUE;
+                        enableConsole();
                     }
-                        
                 }
 
                 reset_console();
