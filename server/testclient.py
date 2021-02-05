@@ -1,3 +1,5 @@
+# Copyright (C) 2021 Brad Colbert
+
 import socket
 
 # create an ipv4 (AF_INET) socket object using the tcp protocol (SOCK_STREAM)
@@ -18,6 +20,7 @@ while True:
         if numbytes == 0:
             break
 
+        print('\trecv\'d %d bytes (%d)\n' % (len(response), numbytes))
         print('\trecv\'d %d bytes (%d)\n' % (len(response), numbytes))
 
     input("Press Enter to continue...")
