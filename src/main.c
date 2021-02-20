@@ -1,3 +1,10 @@
+// Copyright (C) 2021 Brad Colbert
+
+#include "screen_buffers.h"
+#include "display_lists.h"
+#include "dli.h"
+#include "types.h"
+
 #include <atari.h>
 #include <conio.h>
 #include <peekpoke.h>
@@ -15,34 +22,6 @@
 #define GFX_9 0x40
 #define GFX_10 0x80
 #define GFX_11 0xC0
-
-#define BUFF_SIZE 0x22B0
-#define BUFF_BOUNDARIES = BUFF_SIZE / 0x1000
-
-typedef unsigned char byte;
-
-#pragma bss-name (push,"DLIST_R")  
-extern byte dlist_red[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"DLIST_G")  
-extern byte dlist_green[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"DLIST_B")  
-extern byte dlist_blue[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"SCREEN_R")  
-extern byte screen_red[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"SCREEN_G")  
-extern byte screen_green[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"SCREEN_B")  
-extern byte screen_blue[]; 
-#pragma bss-name (pop)
-
-void render_red(void);
-void render_green(void);
-void render_blue(void);
 
 int main()
 {

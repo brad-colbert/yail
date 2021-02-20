@@ -1,26 +1,11 @@
+// Copyright (C) 2021 Brad Colbert
+
+#include "screen_buffers.h"
+#include "display_lists.h"
+#include "types.h"
+
 #include <peekpoke.h>
 #include <atari.h>
-
-typedef unsigned char byte;
-
-#pragma bss-name (push,"DLIST_R")  
-extern byte dlist_red[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"DLIST_G")  
-extern byte dlist_green[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"DLIST_B")  
-extern byte dlist_blue[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"SCREEN_R")  
-extern byte screen_red[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"SCREEN_G")  
-extern byte screen_green[]; 
-#pragma bss-name (pop)
-#pragma bss-name (push,"SCREEN_B")  
-extern byte screen_blue[]; 
-#pragma bss-name (pop)
 
 #pragma optimize(push, off)
 void render_green(void);
