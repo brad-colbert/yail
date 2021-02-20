@@ -65,7 +65,7 @@ image/
 *.atr
 
 # Execuatables
-*.xex
+# *.xex
 *.exe
 
 #

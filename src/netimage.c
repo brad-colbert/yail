@@ -91,6 +91,7 @@ void loadImage(char* url, char* args[])
     OS.vprced   = ih;            // Set PROCEED interrupt vector to our interrupt handler.
     PIA.pactl  |= 1;             // Indicate to PIA we are ready for PROCEED interrupt.
 
+    // Concatinate the args into the search command sent to the server.
     memset(search_command, 0, 80);
     strncat(search_command, "search ", 80);
     while(args[i] != 0x0)
@@ -104,7 +105,8 @@ void loadImage(char* url, char* args[])
     cgetc();
     #endif
 
-    err = nwrite(url, search_command, strlen(search_command)-1); // Send character.
+    // Send the search command
+    err = nwrite(url, search_command, strlen(search_command)-1);
 
     if (err != 1)
     {
@@ -124,7 +126,7 @@ void loadImage(char* url, char* args[])
             #endif
 
             // Keypress stop this
-            running == false;
+            running = false;
             continue;
         }
 

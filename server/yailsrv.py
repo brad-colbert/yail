@@ -24,7 +24,7 @@ print('Listening on {}:{}'.format(bind_ip, bind_port))
 logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
-def search(keywords, max_results=100): #None):
+def search(keywords, max_results=1000): #None):
     url = 'https://duckduckgo.com/'
     params = {
     	'q': keywords

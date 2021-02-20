@@ -90,6 +90,7 @@ void restoreGraphicsState(void)
     OS.color1 = ORG_COLOR1; //POKE(COLOR1, ORG_COLOR1);
     OS.color2 = ORG_COLOR2; //POKE(COLOR2, ORG_COLOR2);
     OS.gprior = ORG_GPRIOR; //POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
+    POKE(0x2BF, 24);
 }
 
 #define IS_LMS(x) (x & 64)
@@ -348,6 +349,8 @@ void enableConsole()
 
             OS.sdlst = gfxState.dl.address;
             ANTIC.nmien = 0x40;
+
+            POKE(0x2BF, 5);
         }
         break;
         case GRAPHICS_9:
@@ -361,6 +364,8 @@ void enableConsole()
             OS.sdlst = gfxState.dl.address;
             OS.vdslst = disable_9_dli;
             ANTIC.nmien = 0x80 | 0x40;
+
+            POKE(0x2BF, 5);
         }
 
     }
@@ -385,6 +390,8 @@ void disableConsole()
 
             ANTIC.nmien = 0x40;
             OS.vdslst = VDSLIST_STATE;
+
+            POKE(0x2BF, 0);
         }
     }
 }
@@ -418,6 +425,7 @@ void setGraphicsMode(byte mode)
             OS.sdlst = gfxState.dl.address; //ORG_SDLIST;
             ANTIC.nmien = NMI_STATE;
             OS.vdslst = VDSLIST_STATE;
+            POKE(0x2BF, 26);
         break;
         default:
             OS.sdlst = gfxState.dl.address;

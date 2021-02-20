@@ -325,7 +325,6 @@ test: $(PROGRAM)
 	$(POSTEMUCMD)
  
 clean:
-  #$(call RMFILES,imgload.atr)
 	$(call RMFILES,$(OBJECTS))
 	$(call RMFILES,$(DEPENDS))
 	$(call RMFILES,$(REMOVES))
@@ -360,6 +359,7 @@ endef # ATR_WRITE_recipe
 $(DISK): $(PROGRAM)
 	@mkdir atr
 	@$(foreach file,$(PROGRAM),$(ATR_WRITE_recipe))
+	@$(foreach file,keybang.xex,$(ATR_WRITE_recipe))
 	$(DIR2ATR) -D -b DosXL230 $@ atr
 	@$(RMDIR) atr
 
