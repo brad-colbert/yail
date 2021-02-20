@@ -27,9 +27,9 @@ CONFIG  :=
  
 # Additional C compiler flags and options.
 # Default: none
-#CFLAGS  = -Oris
+CFLAGS  = -Oris
 #CFLAGS  = -Or
-CFLAGS  = -O
+#CFLAGS  = -O
  
 # Additional assembler flags and options.
 # Default: none
@@ -38,7 +38,7 @@ ASFLAGS =
 # Additional linker flags and options.
 # Default: none
 LDFLAGS = $(LDFLAGS.$(TARGETS))
-LDFLAGS.atari = --mapfile yail.map
+LDFLAGS.atari = --mapfile $(PROGRAM).map
  
 # Path to the directory containing C and ASM sources.
 # Default: src
@@ -246,16 +246,16 @@ ifneq ($(word 2,$(CONFIG)),)
   CONFIG := $(firstword $(CONFIG))
   $(info Using config file $(CONFIG) for linking)
 endif
-
+ 
 RMDIR = $(RM) -r
 DIR2ATR ?= dir2atr
-DISK     = imgload.atr
- 
+DISK     = $(PROGRAM).atr
+
 .SUFFIXES:
 .PHONY: all test clean zap love
 
 disk: $(DISK)
-
+ 
 all: $(PROGRAM)
  
 -include $(DEPENDS)
@@ -325,7 +325,6 @@ test: $(PROGRAM)
 	$(POSTEMUCMD)
  
 clean:
-  #$(call RMFILES,imgload.atr)
 	$(call RMFILES,$(OBJECTS))
 	$(call RMFILES,$(DEPENDS))
 	$(call RMFILES,$(REMOVES))
@@ -362,6 +361,7 @@ $(DISK): $(PROGRAM)
 	@$(foreach file,$(PROGRAM),$(ATR_WRITE_recipe))
 	$(DIR2ATR) -D -b DosXL230 $@ atr
 	@$(RMDIR) atr
+
 
 ###################################################################
 ###  Place your additional targets in the additional Makefiles  ###
