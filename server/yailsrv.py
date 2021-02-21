@@ -148,9 +148,27 @@ def convertToYai(image):
     import numpy as np
     import struct
 
-    gray = image.convert(mode='LA')
-    scaled = gray.resize((80,220), Image.LANCZOS)
-    gray_dither = scaled.convert(dither=Image.FLOYDSTEINBERG, colors=16)
+    d_size = (80,220)
+
+    s_ratio = image.size[0] / image.size[1]
+    d_ratio = d_size[0]/d_size[1]
+
+    background = Image.new("LA", d_size)
+
+    if s_ratio >= d_ratio:
+        image_scaled = image.resize((d_size[0], int(d_size[1] / s_ratio)), Image.LANCZOS)
+    else:
+        image_scaled = image.resize((int(d_size[0] / s_ratio), d_size[1]), Image.LANCZOS)
+
+    background.paste(image_scaled, ((d_size[0]-image_scaled.size[0])//2,
+                                    (d_size[1]-image_scaled.size[1])//2))
+
+    gray = background.convert(mode='LA') # image.convert(mode='LA')
+    #scaled = gray.resize(d_size, Image.LANCZOS)
+    gray_dither = gray.convert(dither=Image.FLOYDSTEINBERG, colors=16) # scaled.convert(dither=Image.FLOYDSTEINBERG, colors=16)
+
+    #gray_dither.show()
+    #input("Press Enter to continue...")
 
     im_matrix = np.array(gray_dither)
 
