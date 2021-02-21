@@ -3,6 +3,8 @@
 #ifndef NETIMAGE_H
 #define NETIMAGE_H
 
-void loadImage(char* url, char* args[]);
+#include "types.h"
+
+void loadImage(char* url, byte numargs, char* args[]);
 
 #endif // NETIMAGE_H

@@ -33,9 +33,9 @@ int main(int argc, char* argv[])
     byte SDMCTL = OS.sdmctl; //PEEK(0x22F);
 
     // Update all of the display lists to properly use their memory.
-    memset(screen_red, 0x11, BUFF_SIZE);
-    memset(screen_green, 0x44, BUFF_SIZE);
-    memset(screen_blue, 0x88, BUFF_SIZE);
+    //memset(screen_red, 0x11, BUFF_SIZE);
+    //memset(screen_green, 0x44, BUFF_SIZE);
+    //memset(screen_blue, 0x88, BUFF_SIZE);
 
     //*(byte*)0x73fd = DL_JMP;
     //*(unsigned*)0x73fe = 0x7400;
@@ -72,9 +72,9 @@ int main(int argc, char* argv[])
     OS.color1 = 15;
 
     // Start rendering with blue data
-    OS.sdlst = dlist_green;
+    OS.sdlst = dlist_red;
 
-    loadImage("N:TCP://192.168.1.116:9999/\"\0", argv);
+    loadImage("N:TCP://192.168.1.116:9999/\"\0", argc-1, &argv[1]);
 
     // Start rotating colors
     // OS.vdslst = render_blue;
@@ -85,7 +85,6 @@ int main(int argc, char* argv[])
 
     OS.sdlst = SDLIST;
     OS.gprior &=  ~GFX_9;
-
 
     return 0;
 }

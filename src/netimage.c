@@ -1,7 +1,5 @@
 // Copyright (C) 2021 Brad Colbert
 
-#if 1
-
 #include "nio.h"
 #include "screen_buffers.h"
 #include "types.h"
@@ -25,41 +23,37 @@
 #define DATA 16
 #define DONE 17
 
-extern void ih();               // defined in intr.s
-
-void* old_vprced;               // old PROCEED vector, restored on exit.
-bool old_enabled=false;         // were interrupts enabled for old vector
 bool running = true;
+
+extern void ih();               // defined in intr.s
+void* old_vprced;               // old PROCEED vector, restored on exit.
+bool old_enabled = false;       // were interrupts enabled for old vector
 unsigned char trip=0;           // if trip=1, fujinet is asking us for attention.
 unsigned short bw=0;            // # of bytes waiting.
-// unsigned ttl_bytes = 0;
-// unsigned seg_used = 0;
+byte err;
+size_t ttl_bytes = 0;
 size_t ttl_seg_bytes_read = 0;
 byte seg_count = 0;
-byte i = 0;
-byte err;
 byte state = VERSION_MAJ;
 byte maj = 0, min = 0, bld = 0;
 byte gfx = 0;
 size_t image_bytes = 0;
 byte header = 0;
-bool img_load_done;
+bool img_load_done = false;
 
-//char search_command[80];
-char search_command[] = "search piper comanche p24";
+char search_command[80];
+//char search_command[] = "search piper comanche p24";
 char stop_cmd[] = "stop";
 char next_cmd[] = "next";
 
-void loadImage(char* url, char* args[])
+void loadImage(char* url, byte numargs, char* args[])
 {
     running = true;
     trip = 0;           // if trip=1, fujinet is asking us for attention.
     bw = 0;            // # of bytes waiting.
+    ttl_bytes = 0;
     ttl_seg_bytes_read = 0;
-    // ttl_bytes = 0;
-    // seg_used = 0;
     seg_count = 0;
-    i = 0;
     state = VERSION_MAJ;
     gfx = 0;
     image_bytes = 0;
@@ -92,22 +86,19 @@ void loadImage(char* url, char* args[])
     OS.vprced   = (void*)ih;     // Set PROCEED interrupt vector to our interrupt handler.
     PIA.pactl  |= 1;             // Indicate to PIA we are ready for PROCEED interrupt.
 
-    /* Generalized but need something less for testing
-    memset(search_command, 0, 80);
-    strncat(search_command, "search ", 80);
-    while(args[i] != 0x0)
     {
-        strcat(search_command, args[i++]);
-        strcat(search_command, " ");
-    }
-    search_command[strlen(search_command)-1] = 0x0;
-    #ifdef DEBUG_NETIMAGE
-    cprintf("Search command %s\n\r", search_command);
-    cgetc();
-    #endif
-    */
+        int i;
+        strcat(search_command, "search ");
+        for(i = 0; i < numargs; ++i)
+        {
+            if(i)
+                strcat(search_command, " ");
 
-    err = nwrite(url, search_command, strlen(search_command)-1); // Send character.
+            strcat(search_command, args[i]);
+        }
+    }
+
+    err = nwrite(url, search_command, strlen(search_command)); // send commands.
 
     if (err != 1)
     {
@@ -122,7 +113,6 @@ void loadImage(char* url, char* args[])
         if(kbhit())
         {
             #ifdef DEBUG_NETIMAGE
-            // clrscr();
             cputs("Key hit, trying to quit\n\r");
             cgetc();
             #endif
@@ -133,17 +123,10 @@ void loadImage(char* url, char* args[])
         }
 
         if (trip == 0) // is nothing waiting for us? puts us in jeopardy of a dead lock spin...
-        {
-            #ifdef DEBUG_NETIMAGE
-            // cputs("No data ");
-            #endif
             continue;
-        }
 
         #ifdef DEBUG_NETIMAGE
-        // clrscr();
         cputs("Data is waiting\n\r");
-        //cgetc();
         #endif
 
         // Something waiting for us, get status and bytes waiting.
@@ -154,6 +137,7 @@ void loadImage(char* url, char* args[])
             #ifdef DEBUG_NETIMAGE
             cprintf("DISCONNECTED.\x9b");
             #endif
+
             running = false;
             continue;
         }
@@ -162,6 +146,7 @@ void loadImage(char* url, char* args[])
             #ifdef DEBUG_NETIMAGE
             cprintf("STATUS ERROR: ");
             #endif
+
             running = false;
             continue;
         }
@@ -170,7 +155,6 @@ void loadImage(char* url, char* args[])
         bw = OS.dvstat[1] * 256 + OS.dvstat[0];
 
         #ifdef DEBUG_NETIMAGE
-        // clrscr();
         cprintf("%d bytes waiting\n\r", bw);
         cprintf("STATE %d                     \n\r", state);
         #endif
@@ -182,9 +166,7 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &maj, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                // clrscr();
                 cprintf("Read V Maj %d\n\r", maj);
-                //cgetc();
                 #endif
 
                 state = VERSION_MIN;
@@ -195,9 +177,7 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &min, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                // clrscr();
                 cprintf("Read V Min %d\n\r", min);
-                //cgetc();
                 #endif
 
                 state = VERSION_BLD;
@@ -208,9 +188,7 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &bld, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                // clrscr();
                 cprintf("Read V Bld %d\n\r", bld);
-                //cgetc();
                 #endif
 
                 state = GRAPHICS;
@@ -221,27 +199,7 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &gfx, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                // clrscr();
                 cprintf("Read V Gfx %d\n\r", gfx);
-                //cgetc();
-                #else
-                // setGraphicsMode(gfx);
-                // disableConsole();
-                #endif
-
-                // seg = &gfxState.buffer.segs[seg_count++];
-
-                #if 0 //def DEBUG_NETIMAGE
-                while(seg->size > 0)
-                {
-                    size_t len = (seg->size / seg->block_size) * seg->block_size;
-                    cprintf("%d %p %d  ", seg_count, seg->addr, len);
-                    seg = &gfxState.buffer.segs[++seg_count];
-                }
-                seg_count = 0;
-                seg = &gfxState.buffer.segs[seg_count];
-                ++seg_count;
-                //cgetc();
                 #endif
 
                 state = HEADER;
@@ -252,9 +210,7 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &header, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                // clrscr();
                 cprintf("Read hdr %d\n\r", header);
-                //cgetc();
                 #endif
 
                 state = SIZE;
@@ -265,9 +221,7 @@ void loadImage(char* url, char* args[])
                     err = nread(url, (byte*)&image_bytes, 2);
 
                 #ifdef DEBUG_NETIMAGE
-                // clrscr();
                 cprintf("Read size %d\n\r", image_bytes);
-                //cgetc();
                 #endif
 
                 state = DATA;
@@ -286,27 +240,29 @@ void loadImage(char* url, char* args[])
                     {
                         if(bw > 0)  // bytes are waiting
                         {
-                            size_t seg_bytes_avail = green_buff_sizes[seg_count] - ttl_seg_bytes_read;
+                            size_t seg_bytes_avail = red_buff_sizes[seg_count] - ttl_seg_bytes_read;
 
                             OS.soundr = 0; // turn off SIO beeping sound
 
                             if(bw > seg_bytes_avail)
                                 bw = seg_bytes_avail;
 
-                            err = nread(url, ((byte*)green_buff_segs[seg_count]) + ttl_seg_bytes_read, bw);
+                            err = nread(url, ((byte*)red_buff_segs[seg_count]) + ttl_seg_bytes_read, bw);
 
                             if(1 == err) // good read
                             {
+                                ttl_bytes += bw;
                                 ttl_seg_bytes_read += bw;
 
                                 #ifdef DEBUG_NETIMAGE
-                                cprintf("S(%d) read = %d, ttl = %d\n\r", seg_count, bw, ttl_seg_bytes_read);
+                                cprintf("S(%d) r = %d, s = %d t = %d           \n\r", seg_count, bw, ttl_seg_bytes_read, ttl_bytes);
                                 #endif
 
-                                if(ttl_seg_bytes_read >= green_buff_sizes[seg_count])
+                                if(ttl_seg_bytes_read >= red_buff_sizes[seg_count])
                                 {
                                     ttl_seg_bytes_read = 0;
                                     ++seg_count;
+
                                     #ifdef DEBUG_NETIMAGE
                                     cprintf("SEGCOUNT UPDATED %d                   \n\r", seg_count);
                                     #endif
@@ -335,9 +291,7 @@ void loadImage(char* url, char* args[])
                     else
                     {
                         #ifdef DEBUG_NETIMAGE
-                        // clrscr();
                         cputs("No more segs... done\n\r");
-                        //cgetc();
                         #endif
 
                         img_load_done = true;
@@ -353,6 +307,7 @@ void loadImage(char* url, char* args[])
                 #ifdef DEBUG_NETIMAGE
                 cputs("Done\n\r");
                 #endif
+
                 running = false;
 
         } // switch state
@@ -362,6 +317,7 @@ void loadImage(char* url, char* args[])
             #ifdef DEBUG_NETIMAGE
             cprintf("READ ERROR: ");
             #endif
+
             running = false;
         }
 
@@ -371,28 +327,28 @@ void loadImage(char* url, char* args[])
         if(img_load_done)
         {
             #ifdef DEBUG_NETIMAGE
-            cputs("LOADING NEXT                     \n\r");
+            cputs("LOADING NEXT                        \n\r");
             cgetc();
+            clrscr();
             #endif
+
+            ttl_bytes = 0;
             ttl_seg_bytes_read = 0;
-            // ttl_bytes = 0;
-            // seg_used = 0;
             seg_count = 0;
-            // seg = NULL;
-            i = 0;
             state = VERSION_MAJ;
             gfx = 0;
             image_bytes = 0;
             header = 0;
             img_load_done = false;
+
             err = nwrite(url, next_cmd, 4);  // get the next image
-            // sleep(3);
+
+            sleep(3);
         }
     } // while
 
     #ifdef DEBUG_NETIMAGE
     cputs("Loop complete\n\r");
-    //cgetc();
     #endif
 
     // Sending stop
@@ -403,8 +359,3 @@ void loadImage(char* url, char* args[])
     OS.vprced=old_vprced; 
     PIA.pactl |= old_enabled; 
 }
-#else
-
-unsigned char trip=0;           // if trip=1, fujinet is asking us for attention.
-
-#endif
