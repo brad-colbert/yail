@@ -343,6 +343,9 @@ void loadImage(char* url, byte numargs, char* args[])
 
             err = nwrite(url, next_cmd, 4);  // get the next image
 
+            // reset ATRACT mode
+            OS.atract = 0x00;
+
             sleep(3);
         }
     } // while

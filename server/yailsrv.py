@@ -25,6 +25,7 @@ logging.basicConfig(level=logging.CRITICAL)
 logger = logging.getLogger(__name__)
 
 def search(keywords, max_results=100): #None):
+
     url = 'https://duckduckgo.com/'
     params = {
     	'q': keywords
@@ -150,15 +151,21 @@ def convertToYai(image):
 
     d_size = (80,220)
 
-    s_ratio = image.size[0] / image.size[1]
-    d_ratio = d_size[0]/d_size[1]
+    print(d_size, image.size)
+
+    s_ratio = image.size[0] / image.size[1]   
+    d_ratio = 1.4545  # 320/220  #  d_size[0] / d_size[1]
+
+    print(s_ratio, d_ratio)
 
     background = Image.new("LA", d_size)
 
     if s_ratio >= d_ratio:
         image_scaled = image.resize((d_size[0], int(d_size[1] / s_ratio)), Image.LANCZOS)
+        print(">", (d_size[0], int(d_size[1] / s_ratio)))
     else:
-        image_scaled = image.resize((int(d_size[0] / s_ratio), d_size[1]), Image.LANCZOS)
+        image_scaled = image.resize((int(d_size[0] * s_ratio), d_size[1]), Image.LANCZOS)
+        print("<", (int(d_size[0] * s_ratio), d_size[1]))
 
     background.paste(image_scaled, ((d_size[0]-image_scaled.size[0])//2,
                                     (d_size[1]-image_scaled.size[1])//2))
