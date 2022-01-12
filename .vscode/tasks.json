@@ -1,13 +1,24 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
     "version": "2.0.0",
+    "options": {
+        "shell": {
+            "executable": "C:\\Windows\\System32\\cmd.exe",
+            "args": [
+                "/d", "/c",
+                "C:\\Program^ Files^ ^(x86^)\\Microsoft^ Visual^ Studio\\2017\\Community\\VC\\Auxiliary\\Build\\vcvars64.bat",
+                "&&"
+            ]
+        }
+    },
     "tasks": [
         {
-            "label": "Build YAIL from Makefile",
+            "label": "Build All Debug",
             "type": "shell",
-            "command": "make",
-            "group": "build",
+            "command": "nmake /f Makefile.mak",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "reveal": "always",
                 "panel": "new"
@@ -17,12 +28,24 @@
             ]
         },
         {
-            "label": "Run make clean on folder",
-            "type": "shell",
-            "command": "make clean",
-            "presentation": {
-                "reveal": "always",
-                "panel": "new"
+            "type":"process",
+            "label": "CC65 Build",
+            "command": "C:\\Users\\bradc\\AppData\\Roaming\\cc65\\bin\\cc65.exe",
+            "args": [
+                "-Oi",
+                "-t",
+                "atari",
+                "${file}"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "isDefault": true,
+                "kind": "build"
             }
         }
     ]

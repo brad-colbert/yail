@@ -3,41 +3,40 @@ CC65=$(CC65_HOME)\\cc65.exe
 CA65=$(CC65_HOME)\\ca65.exe
 CL65=$(CC65_HOME)\\cl65.exe
 
-TARGET=yail.xex
-
+TARGET=yail
 SRC_DIR=src
 
 .SUFFIXES:
 .SUFFIXES: .c .s .o
 
-all: c_files s_files link_files
+all: $(TARGET).xex
 
 c_files: $(SRC_DIR)\*.c
-    @echo Converting $(**) to .s...
-    @echo xxx $(**:.c=.s)
-    @$(MAKE) /f Makefile.mak $(**:.c=.s)
+    @echo Building $(**) to .s...
+    @$(MAKE) -nologo /f Makefile.mak $(**:.c=.s)
 
 s_files: $(SRC_DIR)\*.s
-    @echo Converting $(**) to .o...
-    @$(MAKE) /f Makefile.mak $(**:.s=.o)
+    @echo Building $(**) to .o...
+    @$(MAKE) -nologo /f Makefile.mak $(**:.s=.o)
 
 link_files: $(SRC_DIR)\*.o
-    $(CL65) -t atari -o $(TARGET) -C $(SRC_DIR)\imgload.cfg $(**) atari.lib atarixl.lib
+    $(CL65) -t atari -g -o $(TARGET).xex --config $(SRC_DIR)\$(TARGET).cfg --mapfile $(TARGET).map -Ln $(TARGET).lbl $(**) atari.lib atarixl.lib
 
 .s.o:
-  $(CA65) -t atari $<
+  $(CA65) -t atari -g $<
 
 .c.s:
-  $(CC65) -Oi -t atari $<
+  $(CC65) -t atari -g $<
 
-$(TARGET): all
+$(TARGET).xex: c_files s_files link_files
 
-clean: s_products c_products $(TARGET)
+clean: s_products c_products
+  del $(TARGET).xex $(TARGET).map
 
-c_products: *.c
+c_products: $(SRC_DIR)\*.c
     @echo Cleaning $(**:.c=.s)
-    rm $(**:.c=.s)
+    del $(**:.c=.s)
 
-s_products: *.s
+s_products: $(SRC_DIR)\*.s
     @echo Cleaning $(**:.s=.o)
-    rm $(**:.s=.o)
+    del $(**:.s=.o)
