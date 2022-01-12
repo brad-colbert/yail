@@ -249,7 +249,7 @@ endif
 
 RMDIR = $(RM) -r
 DIR2ATR ?= dir2atr
-DISK     = imgload.atr
+DISK     = yail.atr
  
 .SUFFIXES:
 .PHONY: all test clean zap love
@@ -329,8 +329,8 @@ clean:
 	$(call RMFILES,$(DEPENDS))
 	$(call RMFILES,$(REMOVES))
 	$(call RMFILES,$(PROGRAM))
-	$(call RMFILES,test.map)
-	$(call RMFILES,test.atr)
+	$(call RMFILES,yail.map)
+	$(call RMFILES,yail.atr)
  
 else # $(words $(TARGETLIST)),1
  
@@ -355,12 +355,15 @@ love:
 #	cp imgload atr/autorun.sys
 define ATR_WRITE_recipe
 cp $(file) atr/$(notdir $(file))
+#cp images/Funn43c6.yai atr/$(notdir $(file))
 endef # ATR_WRITE_recipe
 $(DISK): $(PROGRAM)
 	@mkdir atr
-	@$(foreach file,$(PROGRAM),$(ATR_WRITE_recipe))
-	@$(foreach file,keybang.xex,$(ATR_WRITE_recipe))
-	$(DIR2ATR) -D -b DosXL230 $@ atr
+#	@$(foreach file,$(PROGRAM),$(ATR_WRITE_recipe))
+#	@$(foreach file,images/Funn43c6.yai,$(ATR_WRITE_recipe))
+#	$(DIR2ATR) -D -b DosXL230 $@ atr
+	cp $(PROGRAM) images/* atr
+	$(DIR2ATR) -d $@ atr
 	@$(RMDIR) atr
 
 ###################################################################

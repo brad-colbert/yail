@@ -258,7 +258,7 @@ void loadImage(char* url, char* args[])
 
             case SIZE: // read first part of version
                 if (bw > 0)
-                    err = nread(url, &image_bytes, 2);
+                    err = nread(url, (unsigned char*)&image_bytes, 2);
 
                 #ifdef DEBUG_NETIMAGE
                 clrscr();
