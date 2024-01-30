@@ -1,6 +1,9 @@
 # Prerequisites
 *.d
 
+# Assembler files
+*.s
+
 # Object files
 *.o
 *.ko
@@ -68,5 +71,11 @@ image/
 # *.xex
 *.exe
 
+# Virtual env
+server/.venv/
+
 #
 settings.json
+
+# Vscode
+.vscode/
