@@ -11,6 +11,9 @@ from tqdm import tqdm
 import socket
 import threading
 import random
+from duckduckgo_search import DDGS
+from fastcore.all import *
+from pprint import pprint
 
 bind_ip = '0.0.0.0'
 bind_port = 9999
@@ -21,8 +24,25 @@ server.listen(5)  # max backlog of connections
 
 print('Listening on {}:{}'.format(bind_ip, bind_port))
 
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+def search_images(term, max_images=30):
+    print(f"Searching for '{term}'")
+    #return L(ddg_images(term, max_results=max_images)).itemgot('image')
+    with DDGS() as ddgs:
+        results = L([r for r in ddgs.images(term, max_results=max_images)])
+
+        for result in results:
+            pprint(result)
+
+        urls = []
+        for result in results:
+            urls.append(result['image'])
+
+        pprint(urls)
+
+        return urls
 
 def search(keywords, max_results=1000): #None):
     url = 'https://duckduckgo.com/'
@@ -117,7 +137,8 @@ def search(keywords, max_results=1000): #None):
 
         requestUrl = url + data["next"]
 
-    return results
+    return 
+
 
 
 def printJson(objs):
@@ -336,7 +357,8 @@ def handle_client_connection(client_socket):
                 done = True
 
             elif tokens[0] == 'search':
-                urls = search(' '.join(tokens[1:]))
+                urls = search_images(' '.join(tokens[1:]))
+                print(urls)
                 url_idx = random.randint(0, len(urls)-1)
                 url = urls[url_idx]
                 while not streamYai(url, client_socket):
