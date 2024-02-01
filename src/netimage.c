@@ -1,5 +1,7 @@
 // Copyright (C) 2021 Brad Colbert
 
+#if 0
+
 #include "graphics.h"
 #include "utility.h"
 #include "nio.h"
@@ -12,7 +14,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 
-//#define DEBUG_NETIMAGE
+#define DEBUG_NETIMAGE
 
 #define NO_STATE 0
 #define VERSION_MAJ 10
@@ -67,7 +69,7 @@ void loadImage(char* url, char* args[])
     img_load_done = false;
 
     #ifdef DEBUG_NETIMAGE
-    enableConsole();
+//    enableConsole();
     cprintf("Opening %s\n\r", url);
     #endif
 
@@ -141,7 +143,7 @@ void loadImage(char* url, char* args[])
         #ifdef DEBUG_NETIMAGE
         clrscr();
         cputs("Data is waiting\n\r");
-        //cgetc();
+        cgetc();
         #endif
 
         // Something waiting for us, get status and bytes waiting.
@@ -165,9 +167,9 @@ void loadImage(char* url, char* args[])
         bw = OS.dvstat[1] * 256 + OS.dvstat[0];
 
         #ifdef DEBUG_NETIMAGE
-        clrscr();
+        //clrscr();
         cprintf("%d bytes waiting\n\r", bw);
-        //cgetc();
+        cgetc();
         #endif
 
         switch(state)
@@ -177,9 +179,9 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &maj, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                clrscr();
+                //clrscr();
                 cprintf("Read V Maj %d\n\r", maj);
-                //cgetc();
+                cgetc();
                 #endif
 
                 state = VERSION_MIN;
@@ -190,9 +192,9 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &min, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                clrscr();
+                //clrscr();
                 cprintf("Read V Min %d\n\r", min);
-                //cgetc();
+                cgetc();
                 #endif
 
                 state = VERSION_BLD;
@@ -203,9 +205,9 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &bld, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                clrscr();
+                //clrscr();
                 cprintf("Read V Bld %d\n\r", bld);
-                //cgetc();
+                cgetc();
                 #endif
 
                 state = GRAPHICS;
@@ -216,10 +218,10 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &gfx, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                clrscr();
+                //clrscr();
                 cprintf("Read V Gfx %d\n\r", gfx);
-                //cgetc();
-                enableConsole();
+                cgetc();
+//                enableConsole();
                 #else
                 setGraphicsMode(gfx);
                 disableConsole();
@@ -248,9 +250,9 @@ void loadImage(char* url, char* args[])
                     err = nread(url, &header, 1);
 
                 #ifdef DEBUG_NETIMAGE
-                clrscr();
+                //clrscr();
                 cprintf("Read hdr %d\n\r", header);
-                //cgetc();
+                cgetc();
                 #endif
 
                 state = SIZE;
@@ -261,9 +263,9 @@ void loadImage(char* url, char* args[])
                     err = nread(url, (unsigned char*)&image_bytes, 2);
 
                 #ifdef DEBUG_NETIMAGE
-                clrscr();
+                //clrscr();
                 cprintf("Read size %d\n\r", image_bytes);
-                //cgetc();
+                cgetc();
                 #endif
 
                 state = DATA;
@@ -329,9 +331,9 @@ void loadImage(char* url, char* args[])
                     else
                     {
                         #ifdef DEBUG_NETIMAGE
-                        clrscr();
+                        //clrscr();
                         cputs("No more segs... done\n\r");
-                        //cgetc();
+                        cgetc();
                         #endif
 
                         state = DONE;
@@ -391,3 +393,5 @@ void loadImage(char* url, char* args[])
     OS.vprced=old_vprced; 
     PIA.pactl |= old_enabled; 
 }
+
+#endif

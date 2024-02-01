@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Brad Colbert
+#if 0
 
 #include "netimage.h"
 #include "readNetPBM.h"
@@ -34,7 +35,7 @@ char* console_buff = 0x0;
 #endif
 char* tokens[] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 tokens
 byte done = FALSE;
-char server[80] = { "N:TCP://192.168.1.116:9999/\"\0" };
+char server[80] = { "N:TCP://192.168.1.205:9999/\"\0" };
 
 void reset_console(void)
 {
@@ -363,3 +364,5 @@ void console_update(void)
         }
     }
 }
+
+#endif

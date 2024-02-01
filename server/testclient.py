@@ -6,7 +6,7 @@ import socket
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # connect the client
-client.connect(('0.0.0.0', 9999))
+client.connect(('192.168.1.125', 9999))
 client.send(b'search funny\n')
 
 IMAGE_SIZE = 8807

@@ -1,5 +1,7 @@
 // Copyright (C) 2021 Brad Colbert
 
+#if 0
+
 #include "graphics.h"
 #include "console.h"
 #include "files.h"
@@ -505,4 +507,6 @@ void printDList(const char* name, DLDef* dlInfo)
             break;
     }
 }
+#endif
+
 #endif

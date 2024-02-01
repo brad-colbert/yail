@@ -9,6 +9,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if 0
+
 //
 void* nextBoundary(void* start, unsigned bound)
 {
@@ -118,3 +120,5 @@ void freeSegmentedMemory(MemSegs* memsegs)
 
     memset(memsegs, 0, sizeof(MemSegs));
 }
+
+#endif
