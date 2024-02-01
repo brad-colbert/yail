@@ -1,6 +1,4 @@
 // Copyright (C) 2021 Brad Colbert
-#if 0
-
 #include "netimage.h"
 #include "readNetPBM.h"
 #include "graphics.h"
@@ -37,6 +35,11 @@ char* tokens[] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 to
 byte done = FALSE;
 char server[80] = { "N:TCP://192.168.1.205:9999/\"\0" };
 
+#ifndef USE_ORIGINAL
+void reset_console(void)
+{}
+
+#else
 void reset_console(void)
 {
     memset(console_buff, 0, GFX_0_MEM_LINE * console_lines); // wipe all of the console mem
@@ -364,5 +367,4 @@ void console_update(void)
         }
     }
 }
-
 #endif

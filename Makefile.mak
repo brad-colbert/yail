@@ -3,13 +3,15 @@ CC65=$(CC65_HOME)\\cc65.exe
 CA65=$(CC65_HOME)\\ca65.exe
 CL65=$(CC65_HOME)\\cl65.exe
 
-TARGET=YAIL
+PRODUCT=YAIL
+TARGET=atarixl
 SRC_DIR=src
+CFLAGS=-Or
 
 .SUFFIXES:
 .SUFFIXES: .c .s .o
 
-all: $(TARGET).XEX
+all: $(PRODUCT).XEX
 
 c_files: $(SRC_DIR)\*.c
     @echo Building $(**) to .s...
@@ -20,18 +22,18 @@ s_files: $(SRC_DIR)\*.s
     @$(MAKE) -nologo /f Makefile.mak $(**:.s=.o)
 
 link_files: $(SRC_DIR)\*.o
-    $(CL65) -t atari -g -o $(TARGET).XEX --config $(SRC_DIR)\$(TARGET).cfg --mapfile $(TARGET).map -Ln $(TARGET).lbl $(**) atari.lib atarixl.lib
+    $(CL65) -t $(TARGET) $(CFLAGS) -D__SYSTEM_CHECK__=0 -o $(PRODUCT).XEX --config $(SRC_DIR)\$(PRODUCT).$(TARGET).cfg --mapfile $(PRODUCT).map -Ln $(PRODUCT).lbl $(**) $(TARGET).lib
 
 .s.o:
-  $(CA65) -t atari -g $<
+  $(CA65) -t $(TARGET) $<
 
 .c.s:
-  $(CC65) -t atari -g $<
+  $(CC65) -t $(TARGET) $(CFLAGS) $<
 
-$(TARGET).XEX: c_files s_files link_files
+$(PRODUCT).XEX: c_files s_files link_files
 
 clean: s_products c_products
-  del $(TARGET).XEX $(TARGET).map
+  del $(PRODUCT).XEX $(PRODUCT).map
 
 c_products: $(SRC_DIR)\*.c
     @echo Cleaning $(**:.c=.s)
@@ -41,7 +43,7 @@ s_products: $(SRC_DIR)\*.s
     @echo Cleaning $(**:.s=.o)
     del $(**:.s=.o)
 
-atr: $(TARGET).XEX
-    copy $(TARGET).XEX atr
-    dir2atr -d -D -b DosXL230 $(TARGET).ATR atr
+atr: $(PRODUCT).XEX
+    copy $(PRODUCT).XEX atr
+    dir2atr -D $(PRODUCT).ATR atr
 

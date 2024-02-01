@@ -37,6 +37,8 @@ typedef struct _MemSegs
     MemSeg segs[MAX_NUM_SEGS];
 } MemSegs;
 
+void pause(const char* message);
+
 void* nextBoundary(void* start, unsigned bound);
 void* malloc_constrianed(size_t size, size_t fence);
 

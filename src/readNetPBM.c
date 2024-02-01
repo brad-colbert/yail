@@ -1,7 +1,7 @@
 // Copyright (C) 2021 Brad Colbert
 
-#if 0
-
+#ifndef USE_ORIGINAL
+#else
 // Read routines for the NetPBM formats (PBM, PGM, so far)
 #include "readNetPBM.h"
 #include "types.h"
@@ -211,5 +211,4 @@ void readPGM(int fd)
         ++segcount;
     }
 }
-
 #endif

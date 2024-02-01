@@ -1,5 +1,30 @@
 // Copyright (C) 2021 Brad Colbert
 
+#ifndef USE_ORIGINAL
+#include "utility.h"
+#include "types.h"
+
+#include <conio.h>
+
+#include <stdbool.h>
+
+void pause(const char* message)
+{
+    if(message)
+        cputs(message);
+
+    while(true)
+    {
+        if(kbhit())
+        {
+            cgetc();  // flush the key press
+            break;
+        }
+    }
+}
+
+#else
+
 #include "utility.h"
 #include "types.h"
 
@@ -8,8 +33,6 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
-
-#if 0
 
 //
 void* nextBoundary(void* start, unsigned bound)
@@ -120,5 +143,4 @@ void freeSegmentedMemory(MemSegs* memsegs)
 
     memset(memsegs, 0, sizeof(MemSegs));
 }
-
 #endif

@@ -1,6 +1,174 @@
 // Copyright (C) 2021 Brad Colbert
 
-#if 0
+#ifndef USE_ORIGINAL
+
+#define DEBUG
+#include "nio.h"
+
+#include <atari.h>
+#ifdef DEBUG
+#include <conio.h>
+#endif
+
+#include <stdbool.h>
+
+//
+#define TRANSLATION_NONE 0
+
+unsigned char err;              // error code of last operation.
+unsigned char trip=0;           // if trip=1, fujinet is asking us for attention.
+bool old_enabled=false;         // were interrupts enabled for old vector
+void* old_vprced;               // old PROCEED vector, restored on exit.
+
+extern void ih();               // defined in intr.s
+
+signed char enable_network(const char* url)
+{
+    err = nopen(url, TRANSLATION_NONE);
+
+    if (err != SUCCESS)
+    {
+        #ifdef DEBUG
+        cprintf("OPEN ERROR: %d", err);
+        #endif
+        return -1;
+    }
+
+    // Open successful, set up interrupt
+    old_vprced  = OS.vprced;     // save the old interrupt vector 
+    old_enabled = PIA.pactl & 1; // keep track of old interrupt state
+    PIA.pactl  &= (~1);          // Turn off interrupts before changing vector
+    OS.vprced   = ih;            // Set PROCEED interrupt vector to our interrupt handler.
+    PIA.pactl  |= 1;             // Indicate to PIA we are ready for PROCEED interrupt.
+
+    return 0;
+}
+
+signed char disable_network(const char* url)
+{
+    // Restore old PROCEED interrupt.
+    PIA.pactl &= ~1; // disable interrupts
+    OS.vprced=old_vprced; 
+    PIA.pactl |= old_enabled;
+
+    err = nclose(url);
+
+    if (err != SUCCESS)
+    {
+        #ifdef DEBUG
+        cprintf("CLOSE ERROR: %d", err);
+        #endif
+        return -1;
+    }
+
+    return 0;
+}
+
+signed char check_network(const char* url)
+{
+    err = nstatus(url);
+
+    if (err == 136)
+    {
+        #ifdef DEBUG
+        cprintf("DISCONNECTED.\x9b");
+        #endif
+        return -1;
+    }
+    else if (err != 1)
+    {
+        #ifdef DEBUG
+        cprintf("STATUS ERROR: ");
+        #endif
+        return -1;
+    }
+
+    return 0;
+}
+
+signed char write_network(const char* url, const char* buf, unsigned short len)
+{
+    err = nwrite(url, buf, len);
+
+    if (err != 1)
+    {
+        #ifdef DEBUG
+        cprintf("WRITE ERROR: ");
+        #endif
+        return -1;
+    }
+
+    return 0;
+}
+
+signed char read_network(const char* url, unsigned char* buf, unsigned short len)
+{
+    bool running=true;              // Keep reading until we have read all data
+    unsigned short bw=0;            // # of bytes waiting.
+    unsigned short numread = 0;
+
+    while(running == true)
+    {
+        if (trip == 0) // is nothing waiting for us?
+            continue;
+
+        if(check_network(url) < 0)
+        {
+            running = false;
+            continue;
+        }
+
+        // Get # of bytes waiting, no more than size of rx_buf
+        bw = OS.dvstat[1] * 256 + OS.dvstat[0];
+
+        if (bw > (len - numread))
+            bw = (len - numread);
+
+        if (bw > 0)
+        {
+            #ifdef DEBUG
+            cprintf("\rBw %d Ttl %d Read %d\n\r", bw, len - numread, numread);
+            #endif
+
+            err = nread(url, buf + numread, bw);
+
+            if (err != 1)
+            {
+                #ifdef DEBUG
+                cprintf("READ ERROR: %d", err);
+                #endif
+                running=false;
+                continue;
+            }
+
+            // Print the buffer to screen.
+            #ifdef DEBUG
+            cprintf("\rRead %d bytes\n\r", bw);
+            #endif
+
+            trip = 0;
+            PIA.pactl |= 1; // Flag interrupt as serviced, ready for next one.
+            numread += bw;  // Keep track of the number of bytes read
+        } // if bw > 0
+
+        if (numread == len)
+        {
+            #ifdef DEBUG
+            cprintf("Data received\n\r");
+            #endif
+            running=false;
+        }
+
+    } // while running
+
+    return 0;
+}
+
+void loadImage(char* url, char* args[])
+{
+}
+
+#else
 
 #include "graphics.h"
 #include "utility.h"

@@ -1,13 +1,12 @@
 // Copyright (C) 2021 Brad Colbert
-
-#if 0
+#define DEBUG
 
 #include "graphics.h"
 #include "console.h"
 #include "files.h"
+#include "utility.h"
 #include "consts.h"
 #include "types.h"
-#include "utility.h"
 
 #include <conio.h>
 #include <atari.h>
@@ -16,6 +15,17 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+
+#pragma bss-name (push,"FRAMEBUFFER")
+byte framebuffer[FRAMEBUFFER_SIZE];
+#pragma bss-name (pop)
+#pragma bss-name (push,"DISPLAYLIST")
+byte displaylist[DISPLAYLIST_SIZE];
+#pragma bss-name (pop)
+
+#define FRAMEBUFFER_BlOCK_SIZE 0x1000
+#define IS_LMS(x) (x & 64)
 
 //
 void printModeDefs(DLModeDef modeDefs[]);
@@ -30,7 +40,13 @@ void* VDSLIST_STATE = 0;
 byte ORG_GPRIOR = 0x0;
 byte NMI_STATE = 0x0;
 byte ORG_COLOR1, ORG_COLOR2;
+#ifndef USE_ORIGINAL
+byte CURRENT_MODE = 0;
+DLDef dlDef;
+//GfxDef gfxState;
+#else
 GfxDef gfxState;
+#endif
 
 // DLI definitions
 void disable_9_dli(void);  // prototype for below
@@ -95,6 +111,333 @@ void restoreGraphicsState(void)
     POKE(0x2BF, 24);
 }
 
+#ifndef USE_ORIGINAL
+void setGraphicsMode(const byte mode)
+{
+    if(mode == CURRENT_MODE)
+        return;
+
+    dlDef.address = displaylist;  // Always use the same display list memory
+    makeDisplayList(mode);
+
+    #ifdef DEBUG_GRAPHICS
+    cprintf("%p %p\n\r", gfxState.dl.address, gfxState.buffer.start);
+    cgetc();
+    #endif
+
+    OS.color1 = 14;         // Color maximum luminance
+    OS.color2 = 0;          // Background black
+
+    switch(mode)
+    {
+        case GRAPHICS_0:
+            OS.sdlst = ORG_SDLIST; //gfxState.dl.address;
+            ANTIC.nmien = NMI_STATE;
+            OS.vdslst = VDSLIST_STATE;
+            POKE(0x2BF, 26);
+        break;
+        default:
+            OS.sdlst = displaylist; //gfxState.dl.address;
+        break;
+    }
+
+    // Set graphics mode specifc things
+    switch(mode & ~GRAPHICS_CONSOLE_EN)
+    {
+        case GRAPHICS_0:
+        case GRAPHICS_8:
+            OS.gprior = ORG_GPRIOR; // Turn off GTIA
+        break;
+        case GRAPHICS_9:
+            OS.gprior = ORG_GPRIOR | GFX_9;   // Enable GTIA   
+        break;
+        case GRAPHICS_10:
+            OS.gprior = ORG_GPRIOR | GFX_10;   // Enable GTIA   
+        break;
+        case GRAPHICS_11:
+            OS.gprior = ORG_GPRIOR | GFX_11;   // Enable GTIA   
+        break;
+    }
+
+    //gfxState.mode = mode;
+    CURRENT_MODE = mode;
+}
+
+void makeDisplayList(byte mode)
+{
+    //size_t memPerLine = 0;
+    size_t linesPerSeg = 0;
+    byte segCount = 0, modeCount = 0;
+    byte* dlCmd = NULL;
+    unsigned i = 0;
+
+    // Clear the modes
+    memset(dlDef.modes, 0, sizeof(dlDef.modes));
+
+    switch(mode)
+    {
+        case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+        {
+            DLModeDef def = {16, DL_CHR40x8x1, GFX_0_LINES, 0, framebuffer};
+            dlDef.modes[0] = def;
+            dlDef.modes[1].blank_lines = 0xFF;
+        }
+        break;
+        case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
+        case GRAPHICS_9:
+        case GRAPHICS_10:
+        case GRAPHICS_11:
+        {
+            DLModeDef def = {8, DL_MAP320x1x1, GFX_8_LINES, 0, framebuffer};
+            dlDef.modes[0] = def;
+            dlDef.modes[1].blank_lines = 0xFF;
+        }
+        break;
+        case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
+        {
+            DLModeDef gfx = {8, DL_MAP320x1x1, 0, 0, framebuffer};
+            DLModeDef console = {0, DL_CHR40x8x1, 0, 0, 0x0};
+            gfx.lines = GFX_8_LINES - (8 * console_lines);
+            console.lines = console_lines;
+            console.buffer = OS.savmsc; //console_buff;
+            dlDef.modes[0] = gfx;
+            dlDef.modes[1] = console;
+            dlDef.modes[2].blank_lines = 0xFF;
+        }
+        break;
+        case GRAPHICS_9_CONSOLE:
+        case GRAPHICS_10_CONSOLE:
+        case GRAPHICS_11_CONSOLE:
+        {
+            DLModeDef gfx = {8, DL_MAP320x1x1, 0, 0, framebuffer};
+            DLModeDef gfx_dli = {0, DL_MAP320x1x1, 1, 1, 0x0};
+            gfx.lines = (GFX_8_LINES - (8 * console_lines)) - 1;
+            dlDef.modes[0] = gfx;
+            dlDef.modes[1] = gfx_dli;
+            if(console_lines > 1)
+            {
+                DLModeDef console = {0, DL_CHR40x8x1, 0, 0, 0x0};
+                DLModeDef console_dli = {0, DL_CHR40x8x1, 1, 1, 0x0};
+                console.lines = console_lines - 1;
+                console.buffer = OS.savmsc;
+                dlDef.modes[2] = console;
+                dlDef.modes[3] = console_dli;
+                dlDef.modes[4].blank_lines = 0xFF;
+            }
+            else
+            {
+                DLModeDef console = {0, DL_CHR40x8x1, 1, 1, 0x0};
+                console.buffer = OS.savmsc;
+                dlDef.modes[2] = console;
+                dlDef.modes[3].blank_lines = 0xFF;
+            }
+        }
+        break;
+
+    } // switch mode
+
+    #ifdef DEBUG_GRAPHICS
+    clrscr();
+    printModeDefs(dlInfo->modes);
+    cgetc();
+    clrscr();
+    #endif
+
+    generateDisplayList();
+}
+
+void generateDisplayList(void)
+{
+    // Display lists addressing are only able to address 4K of memory so they can't cross
+    // 4K boundaries.  This means that we need to create a display list that addresses
+    // each 4K block by inserting LMS instructions as needed.
+    const ushort MEM_PER_BLOCK = 0x1000;
+    const ushort LINES_PER_BLOCK = MEM_PER_BLOCK / GFX_8_MEM_LINE;
+
+    byte* dl = displaylist;
+    DLModeDef* modeDef = &dlDef.modes[0];
+    byte modeCount = 0;
+    byte blockCount = 0;
+    byte lineInBlock = 0;
+    bool nextBlockFlag = false;
+    #ifdef DEBUG
+    ushort lineAddr = 0;
+    #endif
+
+    cprintf("%02X %02X %d\r\n", framebuffer, MEM_PER_BLOCK, LINES_PER_BLOCK);
+
+    // Convert the modelines to DL instructions.
+    while(modeDef->blank_lines != 0xFF) // for all of the mode definitions
+    {
+        byte line = 0;
+        ushort* lms_addr = (ushort*)modeDef->buffer;
+
+        #ifdef DEBUG
+        lineAddr = lms_addr;
+        #endif
+
+        // Blank spaces
+        for(; line < modeDef->blank_lines/8; ++line)
+            *(dl++) = (byte)DL_BLK8;
+
+        for(line = 0; line < modeDef->lines; ++line)
+        {
+            byte b = (byte)modeDef->mode;   // line is the graphics mode
+
+            #ifdef DEBUG
+            if(line && !(line%23))
+            {
+                cgetc();
+                clrscr();
+            }
+            #endif
+
+            if(!line)  // first line is an LMS to tell the DL where the framebuffer is
+                b = DL_LMS(b);
+
+            nextBlockFlag = (bool)((ushort)line && !((ushort)line % LINES_PER_BLOCK));
+
+            if (nextBlockFlag) // If our current line goes over the block boundary
+            {
+                ++blockCount;
+                lineInBlock = 0;
+
+                // Add an LMS instruction to the DL and update the address to the next block
+                b = DL_LMS(b);
+                lms_addr = ((ushort)blockCount * MEM_PER_BLOCK) + framebuffer;
+                #ifdef DEBUG
+                lineAddr = lms_addr;
+                #endif
+            }
+
+            #ifdef DEBUG
+            cprintf("%d:%d %d %02X->%02X\r\n", line, lineInBlock, nextBlockFlag, lineAddr, lineAddr+(ushort)GFX_8_MEM_LINE);
+            lineAddr += (ushort)GFX_8_MEM_LINE;
+            #endif
+
+            ++lineInBlock;
+
+            if(modeDef->dli)
+                b = DL_DLI(b);
+
+            *(dl++) = b;
+
+            if(IS_LMS(b))
+            {
+                *((unsigned*)dl) = (unsigned)lms_addr;  // Add the address
+                dl += 2;
+            }
+        }
+
+        ++modeCount;
+        modeDef = &dlDef.modes[modeCount];
+    }  // for all of the mode definitions
+
+    // Add the JVB
+    *(dl++) = DL_JVB;
+    *((unsigned*)dl) = (unsigned)dlDef.address;
+    dl+=2;
+
+    #ifdef DEBUG
+    printDList("GenDL");
+    #endif
+}
+
+void enableConsole()
+{
+    switch(CURRENT_MODE)
+    {
+        case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+            break;
+        case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
+        {
+            CURRENT_MODE |= GRAPHICS_CONSOLE_EN;
+
+            makeDisplayList(CURRENT_MODE);
+
+            //OS.sdlst = gfxState.dl.address;
+            ANTIC.nmien = 0x40;
+
+            POKE(0x2BF, 5);
+        }
+        break;
+        case GRAPHICS_9:
+        case GRAPHICS_10:
+        case GRAPHICS_11:
+        {
+            CURRENT_MODE |= GRAPHICS_CONSOLE_EN;
+
+            makeDisplayList(CURRENT_MODE);
+
+            //OS.sdlst = gfxState.dl.address;
+            OS.vdslst = disable_9_dli;
+            ANTIC.nmien = 0x80 | 0x40;
+
+            POKE(0x2BF, 5);
+        }
+
+    }
+}
+
+void disableConsole()
+{
+    switch(CURRENT_MODE) // ^ GRAPHICS_CONSOLE_EN)
+    {
+        case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+            break;
+        case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
+        case GRAPHICS_9_CONSOLE:
+        case GRAPHICS_10_CONSOLE:
+        case GRAPHICS_11_CONSOLE:
+        {
+            CURRENT_MODE &= (byte)~GRAPHICS_CONSOLE_EN;
+
+            makeDisplayList(CURRENT_MODE);
+            //POKEW(SDLSTL, gfxState.dl.address);
+
+            ANTIC.nmien = 0x40;
+            OS.vdslst = VDSLIST_STATE;
+
+            POKE(0x2BF, 0);
+        }
+    }
+}
+
+// Shows the contents of a display list.
+// name - simply used in the output header so you can tell which DL is which on the console.
+// mloc - the location of the DL in memory 
+void printDList(const char* name)
+{
+    byte b = 0x00, low, high;
+    unsigned idx = 0;
+
+    cprintf("Displaylist %s at %p (%d)\n\r", name, dlDef.address, dlDef.size);
+    while(1)
+    {
+        if(idx)
+            cprintf(", ");
+
+        // Get the instruction
+        b = ((byte*)dlDef.address)[idx];
+        if((b & 0x40) && (b & 0x0F)) // these have two address bytes following)
+        {
+            low = ((byte*)dlDef.address)[++idx];
+            high = ((byte*)dlDef.address)[++idx];
+            cprintf("%02X (%02x%02x)", b, low, high);
+            cgetc();
+            clrscr();
+        }
+        else
+            cprintf("%02X", b);
+
+        idx++;
+
+        if(b == 0x41) // JVB so done... maybe  have to add code to look at the address
+            break;
+    }
+}
+
+#else
 #define IS_LMS(x) (x & 64)
 
 void generateDisplayList(const MemSegs* buffInfo, DLDef* dlInfo)

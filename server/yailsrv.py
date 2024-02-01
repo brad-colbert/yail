@@ -212,10 +212,18 @@ def convertToYai(image):
     image_yai += bytes([1, 1, 0])  # version
     image_yai += bytes([4])        # Gfx 9
     image_yai += bytes([3])        # MemToken
-    image_yai += struct.pack("<H",combined_int.shape[0]*combined_int.shape[1]) #, height x width
+    image_yai += struct.pack("<H", ttlbytes) #combined_int.shape[0]*combined_int.shape[1]) # num bytes height x width
     image_yai += bytearray(combined_int)  # image
 
     print('Size: %d x %d = %d (%d)' % (combined_int.shape[0], combined_int.shape[1], ttlbytes, len(image_yai)))
+    
+    # Print first 10 bytes of combined_int as hex
+    res = ' '.join(format(x, '02x') for x in bytearray(combined_int)[0:10])
+    print(str(res))
+
+    # Print last 10 bytes of combined_int as hex
+    res = ' '.join(format(x, '02x') for x in bytearray(combined_int)[-10:])
+    print(str(res))
 
     return image_yai
 

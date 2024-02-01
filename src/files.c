@@ -1,7 +1,6 @@
 // Copyright (C) 2021 Brad Colbert
-
-#if 0
-
+#ifndef USE_ORIGINAL
+#else
 #include "files.h"
 #include "console.h"
 #include "readNetPBM.h"
@@ -337,5 +336,4 @@ byte loadFile(const char filename[])
 
     return 0;
 }
-
 #endif
