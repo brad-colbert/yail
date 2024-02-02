@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdbool.h>
+#include <unistd.h>
 
 //
 struct image_header
@@ -47,9 +48,10 @@ int main(int argc, char* argv[])
     saveCurrentGraphicsState();
 
     // init the frame buffer
-    for(; i < FRAMEBUFFER_SIZE; ++i)
+    for(; i < FRAMEBUFFER_SIZE+32; ++i)
         framebuffer[i] = i%(ushort)256;
 
+    #ifdef LOAD_IMAGES
     // Make sure the image data is pointing to the correct thing
     image.data = framebuffer;
 
@@ -62,17 +64,6 @@ int main(int argc, char* argv[])
     OS.lmargn=0; // Set left margin to 0
     OS.shflok=0; // turn off shift-lock.
 
-    pause("Press any key to start\n\r");
-
-    setGraphicsMode(GRAPHICS_9);
-
-    pause(NULL);
-
-    enableConsole();
-
-    pause("Press any key to continue\n\r");
-
-    #if 0
     // Attempt open.
     cprintf("Opening: %s\n\r", url);
 
@@ -97,6 +88,71 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    pause("Press any key to load the image\n\r");
+
+    setGraphicsMode(image.header.gfx);
+
+    #define READ_IMAGE_IN_BLOCKS
+    #ifdef READ_IMAGE_IN_BLOCKS
+    {
+        bool done = false;
+        while(!done)
+        {
+            if(kbhit())
+            {
+                cgetc();
+                done = true;
+                break;
+            }
+            else
+            {
+                unsigned short bytes_per_line = 40;
+                unsigned short lines = 220;
+                unsigned short buffer_start = framebuffer;
+                unsigned short block_size = DISPLAYLIST_BLOCK_SIZE;
+                unsigned short lines_per_block = (unsigned short)(block_size/bytes_per_line);
+                unsigned short dl_block_size = lines_per_block * bytes_per_line;
+                unsigned short ttl_buff_size = lines * bytes_per_line;
+
+                unsigned short read_size = dl_block_size;
+
+                // Show loading messages
+                enableConsole();
+
+                while(ttl_buff_size > 0)
+                {
+                    if(read_size > ttl_buff_size)
+                        read_size = ttl_buff_size;
+
+                    cprintf("Start %04X Read %04X\n\r", buffer_start, read_size);
+                    if(read_network(url, buffer_start, read_size) < 0)
+                    {
+                        cprintf("Error reading\n\r");
+                        disable_network(url);
+                        return -1;
+                    }
+
+                    buffer_start = buffer_start + block_size;
+                    ttl_buff_size = ttl_buff_size - read_size;
+                }
+
+                // Hide messages and show only the image
+                disableConsole();
+
+                sleep(5);
+
+                if(write_network(url, "next", 4) < 0)  // Send the request
+                {
+                    cprintf("Unable to write request\n\r");
+                    done = true;
+                    break;
+                }
+            }
+        }
+    }
+
+    #else
+
     if(read_network(url, image.data, sizeof(framebuffer)) < 0)
     {
         cprintf("Error reading\n\r");
@@ -104,38 +160,46 @@ int main(int argc, char* argv[])
         return -1;
     }
 
+    #endif
+
     if(write_network(url, "quit", 4) < 0)  // Send the request
-    {
         cprintf("Unable to write request\n\r");
-        disable_network(url);
-        return -1;
-    }
 
     disable_network(url);
 
     OS.soundr = 3; // Restore SIO beeping sound
-
-    // Print information about the image
-    cprintf("ver %d.%d.%d  gfx %d  mtkn %d (%d)\n\r", image.header.v1, image.header.v2, image.header.v3, image.header.gfx, image.header.memtkn, image.header.size);
-
-    // The first 10 bytes
-    for(i = 0; i < 10; ++i)
-    {
-        cprintf("%02X ", image.data[i]);
-    }
-    cprintf("\n\r");
-
-    // The last 10 bytes
-    for(i = 8790; i < 8800; ++i)
-    {
-        cprintf("%02X ", image.data[i]);
-    }
-    cprintf("\n\r");
+    #else
     #endif
+
+    setGraphicsMode(GRAPHICS_9);
+
+    {
+        bool console = false;
+        while (1)
+        {
+            if(kbhit())
+            {
+                if(cgetc() == CH_ESC)
+                    break;
+                
+                if(console)
+                {
+                    disableConsole();
+                    console = false;
+                }
+                else
+                {
+                    enableConsole();
+                    console = true;
+                }
+            }
+        }
+    }
+
+    pause("Press any key to continue\n\r");
 
     // Show how it looks in Gfx0 (text mode)
     restoreGraphicsState();
-    //setGraphicsMode(GRAPHICS_0);
 
     pause("Press any key to quit\n\r");
 

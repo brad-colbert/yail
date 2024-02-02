@@ -39,6 +39,7 @@
 
 // Display list memory size
 #define DISPLAYLIST_SIZE 256
+#define DISPLAYLIST_BLOCK_SIZE 0x1000
 
 //
 //#define CONSOLE_MEM 0xBC40  // We should read this from the system before we switch

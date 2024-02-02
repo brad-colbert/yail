@@ -1,5 +1,5 @@
 // Copyright (C) 2021 Brad Colbert
-#define DEBUG
+//#define DEBUG
 
 #include "graphics.h"
 #include "console.h"
@@ -18,14 +18,14 @@
 #include <stdbool.h>
 
 #pragma bss-name (push,"FRAMEBUFFER")
-byte framebuffer[FRAMEBUFFER_SIZE];
+byte framebuffer[FRAMEBUFFER_SIZE + 32];  // 32 bytes of padding
 #pragma bss-name (pop)
 #pragma bss-name (push,"DISPLAYLIST")
 byte displaylist[DISPLAYLIST_SIZE];
 #pragma bss-name (pop)
 
 #define FRAMEBUFFER_BlOCK_SIZE 0x1000
-#define IS_LMS(x) (x & 64)
+#define IS_LMS(x) (x & (byte)64)
 
 //
 void printModeDefs(DLModeDef modeDefs[]);
@@ -159,13 +159,11 @@ void setGraphicsMode(const byte mode)
         break;
     }
 
-    //gfxState.mode = mode;
     CURRENT_MODE = mode;
 }
 
 void makeDisplayList(byte mode)
 {
-    //size_t memPerLine = 0;
     size_t linesPerSeg = 0;
     byte segCount = 0, modeCount = 0;
     byte* dlCmd = NULL;
@@ -210,19 +208,22 @@ void makeDisplayList(byte mode)
         case GRAPHICS_11_CONSOLE:
         {
             DLModeDef gfx = {8, DL_MAP320x1x1, 0, 0, framebuffer};
-            DLModeDef gfx_dli = {0, DL_MAP320x1x1, 1, 1, 0x0};
-            gfx.lines = (GFX_8_LINES - (8 * console_lines)) - 1;
+            DLModeDef gfx_dli = {0, DL_MAP320x1x1, 2, 1, 0x0};      // Turn off the GTIA gfx modes using a DLI
+            gfx.lines = GFX_8_LINES - (8 * console_lines) - 2;
             dlDef.modes[0] = gfx;
             dlDef.modes[1] = gfx_dli;
             if(console_lines > 1)
             {
                 DLModeDef console = {0, DL_CHR40x8x1, 0, 0, 0x0};
-                DLModeDef console_dli = {0, DL_CHR40x8x1, 1, 1, 0x0};
-                console.lines = console_lines - 1;
+                //DLModeDef console_dli = {0, DL_CHR40x8x1, 1, 1, 0x0};
+                //console.lines = console_lines - 1;
+                console.lines = console_lines;
                 console.buffer = OS.savmsc;
+                //dlDef.modes[2] = console;
+                //dlDef.modes[3] = console_dli;
+                //dlDef.modes[4].blank_lines = 0xFF;
                 dlDef.modes[2] = console;
-                dlDef.modes[3] = console_dli;
-                dlDef.modes[4].blank_lines = 0xFF;
+                dlDef.modes[3].blank_lines = 0xFF;
             }
             else
             {
@@ -236,13 +237,6 @@ void makeDisplayList(byte mode)
 
     } // switch mode
 
-    #ifdef DEBUG_GRAPHICS
-    clrscr();
-    printModeDefs(dlInfo->modes);
-    cgetc();
-    clrscr();
-    #endif
-
     generateDisplayList();
 }
 
@@ -251,20 +245,22 @@ void generateDisplayList(void)
     // Display lists addressing are only able to address 4K of memory so they can't cross
     // 4K boundaries.  This means that we need to create a display list that addresses
     // each 4K block by inserting LMS instructions as needed.
-    const ushort MEM_PER_BLOCK = 0x1000;
-    const ushort LINES_PER_BLOCK = MEM_PER_BLOCK / GFX_8_MEM_LINE;
+    //const ushort MEM_PER_BLOCK = 0x1000;
+    const ushort LINES_PER_BLOCK = DISPLAYLIST_BLOCK_SIZE / GFX_8_MEM_LINE;
 
     byte* dl = displaylist;
     DLModeDef* modeDef = &dlDef.modes[0];
+    byte prev_mode = 0;
     byte modeCount = 0;
     byte blockCount = 0;
     byte lineInBlock = 0;
     bool nextBlockFlag = false;
+    byte b = 0;
     #ifdef DEBUG
     ushort lineAddr = 0;
     #endif
 
-    cprintf("%02X %02X %d\r\n", framebuffer, MEM_PER_BLOCK, LINES_PER_BLOCK);
+    cprintf("%02X %02X %d\r\n", framebuffer, DISPLAYLIST_BLOCK_SIZE, LINES_PER_BLOCK);
 
     // Convert the modelines to DL instructions.
     while(modeDef->blank_lines != 0xFF) // for all of the mode definitions
@@ -282,7 +278,7 @@ void generateDisplayList(void)
 
         for(line = 0; line < modeDef->lines; ++line)
         {
-            byte b = (byte)modeDef->mode;   // line is the graphics mode
+            b = (byte)modeDef->mode;   // line is the graphics mode
 
             #ifdef DEBUG
             if(line && !(line%23))
@@ -293,21 +289,27 @@ void generateDisplayList(void)
             #endif
 
             if(!line)  // first line is an LMS to tell the DL where the framebuffer is
-                b = DL_LMS(b);
-
-            nextBlockFlag = (bool)((ushort)line && !((ushort)line % LINES_PER_BLOCK));
-
-            if (nextBlockFlag) // If our current line goes over the block boundary
             {
-                ++blockCount;
-                lineInBlock = 0;
+                if(prev_mode != modeDef->mode)  // If the mode has changed
+                    b = DL_LMS(b);
+                prev_mode = modeDef->mode;
+            }
+            else       // Other than first line
+            {
+                nextBlockFlag = (bool)(!((ushort)line % LINES_PER_BLOCK));
 
-                // Add an LMS instruction to the DL and update the address to the next block
-                b = DL_LMS(b);
-                lms_addr = ((ushort)blockCount * MEM_PER_BLOCK) + framebuffer;
-                #ifdef DEBUG
-                lineAddr = lms_addr;
-                #endif
+                if (nextBlockFlag) // If our current line goes over the block boundary
+                {
+                    ++blockCount;
+                    lineInBlock = 0;
+
+                    // Add an LMS instruction to the DL and update the address to the next block
+                    b = DL_LMS(b);
+                    lms_addr = ((ushort)blockCount * DISPLAYLIST_BLOCK_SIZE) + framebuffer;
+                    #ifdef DEBUG
+                    lineAddr = lms_addr;
+                    #endif
+                }
             }
 
             #ifdef DEBUG
@@ -318,7 +320,11 @@ void generateDisplayList(void)
             ++lineInBlock;
 
             if(modeDef->dli)
+            {
                 b = DL_DLI(b);
+                // Disable to DLI bit setting for follow on lines.
+                modeDef->dli = 0;
+            }
 
             *(dl++) = b;
 
@@ -333,8 +339,13 @@ void generateDisplayList(void)
         modeDef = &dlDef.modes[modeCount];
     }  // for all of the mode definitions
 
-    // Add the JVB
-    *(dl++) = DL_JVB;
+    // Add the JVB and perform the DLI if needed
+    //if(modeDef->dli)
+    b = (byte)DL_DLI(DL_JVB);
+    //else
+    //    b = DL_JVB;
+
+    *(dl++) = b;
     *((unsigned*)dl) = (unsigned)dlDef.address;
     dl+=2;
 
