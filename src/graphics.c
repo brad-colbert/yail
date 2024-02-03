@@ -7,6 +7,11 @@
 #include "utility.h"
 #include "consts.h"
 #include "types.h"
+#ifdef USE_PREDEF_DLS
+#include "graphics_8_dl.h"
+#include "graphics_8_console_dl.h"
+#include "graphics_9_console_dl.h"
+#endif
 
 #include <conio.h>
 #include <atari.h>
@@ -20,9 +25,11 @@
 #pragma bss-name (push,"FRAMEBUFFER")
 byte framebuffer[FRAMEBUFFER_SIZE + 32];  // 32 bytes of padding
 #pragma bss-name (pop)
+#ifndef USE_PREDEF_DLS
 #pragma bss-name (push,"DISPLAYLIST")
 byte displaylist[DISPLAYLIST_SIZE];
 #pragma bss-name (pop)
+#endif
 
 #define FRAMEBUFFER_BlOCK_SIZE 0x1000
 #define IS_LMS(x) (x & (byte)64)
@@ -117,7 +124,10 @@ void setGraphicsMode(const byte mode)
     if(mode == CURRENT_MODE)
         return;
 
+    #ifdef USE_PREDEF_DLS
+    #else
     dlDef.address = displaylist;  // Always use the same display list memory
+    #endif
     makeDisplayList(mode);
 
     #ifdef DEBUG_GRAPHICS
@@ -131,13 +141,13 @@ void setGraphicsMode(const byte mode)
     switch(mode)
     {
         case GRAPHICS_0:
-            OS.sdlst = ORG_SDLIST; //gfxState.dl.address;
+            OS.sdlst = ORG_SDLIST;
             ANTIC.nmien = NMI_STATE;
             OS.vdslst = VDSLIST_STATE;
             POKE(0x2BF, 26);
         break;
         default:
-            OS.sdlst = displaylist; //gfxState.dl.address;
+            OS.sdlst = displaylist;
         break;
     }
 
@@ -164,6 +174,28 @@ void setGraphicsMode(const byte mode)
 
 void makeDisplayList(byte mode)
 {
+    #ifdef USE_PREDEF_DLS
+    switch(mode)
+    {
+        case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+            OS.sdlst = ORG_SDLIST;
+        break;
+        case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
+        case GRAPHICS_9:
+        case GRAPHICS_10:
+        case GRAPHICS_11:
+            dlDef.address = graphics_8_dl;
+        break;
+        case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
+            dlDef.address = graphics_8_console_dl;
+        break;
+        case GRAPHICS_9_CONSOLE:
+        case GRAPHICS_10_CONSOLE:
+        case GRAPHICS_11_CONSOLE:
+            dlDef.address = graphics_9_console_dl;
+        break;
+    } // switch mode    
+    #else
     size_t linesPerSeg = 0;
     byte segCount = 0, modeCount = 0;
     byte* dlCmd = NULL;
@@ -208,29 +240,28 @@ void makeDisplayList(byte mode)
         case GRAPHICS_11_CONSOLE:
         {
             DLModeDef gfx = {8, DL_MAP320x1x1, 0, 0, framebuffer};
-            DLModeDef gfx_dli = {0, DL_MAP320x1x1, 2, 1, 0x0};      // Turn off the GTIA gfx modes using a DLI
+            DLModeDef gfx_dli = {0, DL_MAP320x1x1, 1, 1, 0x0};      // Turn off the GTIA gfx modes using a DLI
+            DLModeDef gfx_std = {0, DL_MAP320x1x1, 1, 0, 0x0};      // Turn off the GTIA gfx modes using a DLI
             gfx.lines = GFX_8_LINES - (8 * console_lines) - 2;
             dlDef.modes[0] = gfx;
             dlDef.modes[1] = gfx_dli;
+            dlDef.modes[2] = gfx_std;
             if(console_lines > 1)
             {
                 DLModeDef console = {0, DL_CHR40x8x1, 0, 0, 0x0};
-                //DLModeDef console_dli = {0, DL_CHR40x8x1, 1, 1, 0x0};
-                //console.lines = console_lines - 1;
-                console.lines = console_lines;
+                DLModeDef console_dli = {0, DL_CHR40x8x1, 1, 1, 0x0};
+                console.lines = console_lines-1;
                 console.buffer = OS.savmsc;
-                //dlDef.modes[2] = console;
-                //dlDef.modes[3] = console_dli;
-                //dlDef.modes[4].blank_lines = 0xFF;
-                dlDef.modes[2] = console;
-                dlDef.modes[3].blank_lines = 0xFF;
+                dlDef.modes[3] = console;
+                dlDef.modes[4] = console_dli;
+                dlDef.modes[5].blank_lines = 0xFF;
             }
             else
             {
                 DLModeDef console = {0, DL_CHR40x8x1, 1, 1, 0x0};
                 console.buffer = OS.savmsc;
-                dlDef.modes[2] = console;
-                dlDef.modes[3].blank_lines = 0xFF;
+                dlDef.modes[3] = console;
+                dlDef.modes[4].blank_lines = 0xFF;
             }
         }
         break;
@@ -238,10 +269,14 @@ void makeDisplayList(byte mode)
     } // switch mode
 
     generateDisplayList();
+    #endif
 }
 
 void generateDisplayList(void)
 {
+    //#define DEBUG
+    #ifdef USE_PREDEF_DLS
+    #else
     // Display lists addressing are only able to address 4K of memory so they can't cross
     // 4K boundaries.  This means that we need to create a display list that addresses
     // each 4K block by inserting LMS instructions as needed.
@@ -249,13 +284,13 @@ void generateDisplayList(void)
     const ushort LINES_PER_BLOCK = DISPLAYLIST_BLOCK_SIZE / GFX_8_MEM_LINE;
 
     byte* dl = displaylist;
-    DLModeDef* modeDef = &dlDef.modes[0];
+    //DLModeDef* modeDef = &dlDef.modes[0];
     byte prev_mode = 0;
     byte modeCount = 0;
     byte blockCount = 0;
     byte lineInBlock = 0;
     bool nextBlockFlag = false;
-    byte b = 0;
+    byte b = 0; //, jvb = 0;
     #ifdef DEBUG
     ushort lineAddr = 0;
     #endif
@@ -263,22 +298,24 @@ void generateDisplayList(void)
     cprintf("%02X %02X %d\r\n", framebuffer, DISPLAYLIST_BLOCK_SIZE, LINES_PER_BLOCK);
 
     // Convert the modelines to DL instructions.
-    while(modeDef->blank_lines != 0xFF) // for all of the mode definitions
+    while(dlDef.modes[modeCount].blank_lines != 0xFF) // for all of the mode definitions
     {
         byte line = 0;
-        ushort* lms_addr = (ushort*)modeDef->buffer;
+        ushort* lms_addr = (ushort*)dlDef.modes[modeCount].buffer;
+
+        //modeDef = &dlDef.modes[modeCount];
 
         #ifdef DEBUG
         lineAddr = lms_addr;
         #endif
 
         // Blank spaces
-        for(; line < modeDef->blank_lines/8; ++line)
+        for(; line < dlDef.modes[modeCount].blank_lines/8; ++line)
             *(dl++) = (byte)DL_BLK8;
 
-        for(line = 0; line < modeDef->lines; ++line)
+        for(line = 0; line < dlDef.modes[modeCount].lines; ++line)
         {
-            b = (byte)modeDef->mode;   // line is the graphics mode
+            b = (byte)dlDef.modes[modeCount].mode;   // line is the graphics mode
 
             #ifdef DEBUG
             if(line && !(line%23))
@@ -290,9 +327,9 @@ void generateDisplayList(void)
 
             if(!line)  // first line is an LMS to tell the DL where the framebuffer is
             {
-                if(prev_mode != modeDef->mode)  // If the mode has changed
+                if(prev_mode != dlDef.modes[modeCount].mode)  // If the mode has changed
                     b = DL_LMS(b);
-                prev_mode = modeDef->mode;
+                prev_mode = dlDef.modes[modeCount].mode;
             }
             else       // Other than first line
             {
@@ -319,12 +356,15 @@ void generateDisplayList(void)
 
             ++lineInBlock;
 
-            if(modeDef->dli)
+            if(dlDef.modes[modeCount].dli)
             {
                 b = DL_DLI(b);
+                //jvb = (byte)DL_DLI(DL_JVB);
                 // Disable to DLI bit setting for follow on lines.
-                modeDef->dli = 0;
+                //dlDef.modes[modeCount].dli = 0;
             }
+            //else
+            //    jvb = DL_JVB;
 
             *(dl++) = b;
 
@@ -336,22 +376,24 @@ void generateDisplayList(void)
         }
 
         ++modeCount;
-        modeDef = &dlDef.modes[modeCount];
     }  // for all of the mode definitions
 
     // Add the JVB and perform the DLI if needed
-    //if(modeDef->dli)
-    b = (byte)DL_DLI(DL_JVB);
+    //if(dlDef.modes[modeCount].dli)
+    //    b = (byte)DL_DLI(DL_JVB);
     //else
     //    b = DL_JVB;
 
-    *(dl++) = b;
+    *(dl++) = DL_JVB;
     *((unsigned*)dl) = (unsigned)dlDef.address;
     dl+=2;
 
     #ifdef DEBUG
     printDList("GenDL");
     #endif
+    #endif
+
+    #undef DEBUG
 }
 
 void enableConsole()

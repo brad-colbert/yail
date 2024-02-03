@@ -27,7 +27,7 @@ print('Listening on {}:{}'.format(bind_ip, bind_port))
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-def search_images(term, max_images=30):
+def search_images(term, max_images=1000):
     print(f"Searching for '{term}'")
     #return L(ddg_images(term, max_results=max_images)).itemgot('image')
     with DDGS() as ddgs:
@@ -214,6 +214,9 @@ def convertToYai(image):
     image_yai += bytes([3])        # MemToken
     image_yai += struct.pack("<H", ttlbytes) #combined_int.shape[0]*combined_int.shape[1]) # num bytes height x width
     image_yai += bytearray(combined_int)  # image
+
+    #pil_image_yai = Image.fromarray(combined_int, mode='L')
+    #pil_image_yai.show()
 
     print('Size: %d x %d = %d (%d)' % (combined_int.shape[0], combined_int.shape[1], ttlbytes, len(image_yai)))
     

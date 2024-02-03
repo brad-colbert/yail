@@ -2,7 +2,7 @@
 
 #ifndef USE_ORIGINAL
 
-#define DEBUG
+//#define DEBUG
 #include "nio.h"
 
 #include <atari.h>

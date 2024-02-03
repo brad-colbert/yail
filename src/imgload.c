@@ -43,7 +43,7 @@ struct image_data image;
 
 int main(int argc, char* argv[])
 {
-    unsigned short i = 0;
+    ushort i = 0;
 
     saveCurrentGraphicsState();
 
@@ -51,6 +51,7 @@ int main(int argc, char* argv[])
     for(; i < FRAMEBUFFER_SIZE+32; ++i)
         framebuffer[i] = i%(ushort)256;
 
+    #define LOAD_IMAGES
     #ifdef LOAD_IMAGES
     // Make sure the image data is pointing to the correct thing
     image.data = framebuffer;
@@ -74,28 +75,32 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    if(write_network(url, "search funny", 12) < 0)  // Send the request
+    if(write_network(url, "search apod astronomy", 12) < 0)  // Send the request
     {
         cprintf("Unable to write request\n\r");
         disable_network(url);
         return -1;
     }
 
-    if(read_network(url, (unsigned char*)&image.header, sizeof(image.header)) < 0)
-    {
-        cprintf("Error reading\n\r");
-        disable_network(url);
-        return -1;
-    }
-
     pause("Press any key to load the image\n\r");
 
-    setGraphicsMode(image.header.gfx);
+    //setGraphicsMode(image.header.gfx);
+    setGraphicsMode(GRAPHICS_9);
+    //enableConsole();
 
     #define READ_IMAGE_IN_BLOCKS
     #ifdef READ_IMAGE_IN_BLOCKS
     {
         bool done = false;
+        const ushort bytes_per_line = 40;
+        const ushort lines = 220;
+        ushort buffer_start;
+        ushort block_size;
+        ushort lines_per_block;
+        ushort dl_block_size;
+        ushort ttl_buff_size;
+        ushort read_size;
+
         while(!done)
         {
             if(kbhit())
@@ -106,24 +111,30 @@ int main(int argc, char* argv[])
             }
             else
             {
-                unsigned short bytes_per_line = 40;
-                unsigned short lines = 220;
-                unsigned short buffer_start = framebuffer;
-                unsigned short block_size = DISPLAYLIST_BLOCK_SIZE;
-                unsigned short lines_per_block = (unsigned short)(block_size/bytes_per_line);
-                unsigned short dl_block_size = lines_per_block * bytes_per_line;
-                unsigned short ttl_buff_size = lines * bytes_per_line;
-
-                unsigned short read_size = dl_block_size;
+                buffer_start = framebuffer;
+                block_size = DISPLAYLIST_BLOCK_SIZE;
+                lines_per_block = (ushort)(block_size/bytes_per_line);
+                dl_block_size = lines_per_block * bytes_per_line;
+                ttl_buff_size = lines * bytes_per_line;
+                read_size = dl_block_size;
 
                 // Show loading messages
-                enableConsole();
+                //enableConsole();
+
+                // Read the header
+                if(read_network(url, (unsigned char*)&image.header, sizeof(image.header)) < 0)
+                {
+                    cprintf("Error reading\n\r");
+                    disable_network(url);
+                    return -1;
+                }
 
                 while(ttl_buff_size > 0)
                 {
                     if(read_size > ttl_buff_size)
                         read_size = ttl_buff_size;
 
+                    clrscr();
                     cprintf("Start %04X Read %04X\n\r", buffer_start, read_size);
                     if(read_network(url, buffer_start, read_size) < 0)
                     {
@@ -137,7 +148,7 @@ int main(int argc, char* argv[])
                 }
 
                 // Hide messages and show only the image
-                disableConsole();
+                //disableConsole();
 
                 sleep(5);
 
@@ -169,7 +180,6 @@ int main(int argc, char* argv[])
 
     OS.soundr = 3; // Restore SIO beeping sound
     #else
-    #endif
 
     setGraphicsMode(GRAPHICS_9);
 
@@ -197,6 +207,7 @@ int main(int argc, char* argv[])
     }
 
     pause("Press any key to continue\n\r");
+    #endif
 
     // Show how it looks in Gfx0 (text mode)
     restoreGraphicsState();
