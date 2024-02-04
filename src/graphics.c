@@ -1,5 +1,6 @@
 // Copyright (C) 2021 Brad Colbert
 //#define DEBUG
+#define USE_PREDEF_DLS
 
 #include "graphics.h"
 #include "console.h"
@@ -7,11 +8,6 @@
 #include "utility.h"
 #include "consts.h"
 #include "types.h"
-#ifdef USE_PREDEF_DLS
-#include "graphics_8_dl.h"
-#include "graphics_8_console_dl.h"
-#include "graphics_9_console_dl.h"
-#endif
 
 #include <conio.h>
 #include <atari.h>
@@ -29,6 +25,12 @@ byte framebuffer[FRAMEBUFFER_SIZE + 32];  // 32 bytes of padding
 #pragma bss-name (push,"DISPLAYLIST")
 byte displaylist[DISPLAYLIST_SIZE];
 #pragma bss-name (pop)
+#else
+#pragma data-name (push,"GFX8_DL")
+#include "graphics_8_dl.h"
+#pragma data-name (pop)
+#include "graphics_8_console_dl.h"
+#include "graphics_9_console_dl.h"
 #endif
 
 #define FRAMEBUFFER_BlOCK_SIZE 0x1000
@@ -98,8 +100,8 @@ void disable_9_dli(void) {
 
 void saveCurrentGraphicsState(void)
 {
-    ORG_SDLIST = OS.sdlst; //PEEKW(SDLSTL);
-    VDSLIST_STATE = OS.vdslst; //PEEKW(VDSLST);
+    ORG_SDLIST = OS.sdlst;
+    VDSLIST_STATE = OS.vdslst;
     NMI_STATE = ANTIC.nmien;
     ORG_GPRIOR = OS.gprior;       // Save current priority states
     ORG_COLOR1 = OS.color1;
@@ -109,12 +111,12 @@ void saveCurrentGraphicsState(void)
 
 void restoreGraphicsState(void)
 {
-    ANTIC.nmien = NMI_STATE; //POKE(NMIEN, NMI_STATE);
-    OS.vdslst = VDSLIST_STATE; //POKEW(VDSLST, VDSLIST_STATE);
-    OS.sdlst = ORG_SDLIST; // POKEW(SDLSTL, ORG_SDLIST);
-    OS.color1 = ORG_COLOR1; //POKE(COLOR1, ORG_COLOR1);
-    OS.color2 = ORG_COLOR2; //POKE(COLOR2, ORG_COLOR2);
-    OS.gprior = ORG_GPRIOR; //POKE(GPRIOR, ORG_GPRIOR);       // restore priority states
+    ANTIC.nmien = NMI_STATE;
+    OS.vdslst = VDSLIST_STATE;
+    OS.sdlst = ORG_SDLIST;
+    OS.color1 = ORG_COLOR1;
+    OS.color2 = ORG_COLOR2;
+    OS.gprior = ORG_GPRIOR;       // restore priority states
     POKE(0x2BF, 24);
 }
 
@@ -146,9 +148,28 @@ void setGraphicsMode(const byte mode)
             OS.vdslst = VDSLIST_STATE;
             POKE(0x2BF, 26);
         break;
+
+        #ifdef USE_PREDEF_DLS
+        case GRAPHICS_8:
+        case GRAPHICS_9:
+        case GRAPHICS_10:
+        case GRAPHICS_11:
+            OS.sdlst = graphics_8_dl;
+        break;
+
+        case GRAPHICS_8_CONSOLE:
+            OS.sdlst = graphics_8_console_dl;
+        break;
+        case GRAPHICS_9_CONSOLE:
+        case GRAPHICS_10_CONSOLE:
+        case GRAPHICS_11_CONSOLE:
+            OS.sdlst = graphics_9_console_dl;
+        break;
+        #else
         default:
             OS.sdlst = displaylist;
         break;
+        #endif
     }
 
     // Set graphics mode specifc things
@@ -156,7 +177,7 @@ void setGraphicsMode(const byte mode)
     {
         case GRAPHICS_0:
         case GRAPHICS_8:
-            OS.gprior = ORG_GPRIOR; // Turn off GTIA
+            OS.gprior = ORG_GPRIOR;           // Return original state of GTIA
         break;
         case GRAPHICS_9:
             OS.gprior = ORG_GPRIOR | GFX_9;   // Enable GTIA   

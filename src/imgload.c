@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
     for(; i < FRAMEBUFFER_SIZE+32; ++i)
         framebuffer[i] = i%(ushort)256;
 
-    #define LOAD_IMAGES
+    //#define LOAD_IMAGES
     #ifdef LOAD_IMAGES
     // Make sure the image data is pointing to the correct thing
     image.data = framebuffer;
