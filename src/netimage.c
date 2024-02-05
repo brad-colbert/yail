@@ -4,6 +4,7 @@
 
 //#define DEBUG
 #include "nio.h"
+#include "types.h"
 
 #include <atari.h>
 #ifdef DEBUG
@@ -24,7 +25,7 @@ extern void ih();               // defined in intr.s
 
 signed char enable_network(const char* url)
 {
-    err = nopen(url, TRANSLATION_NONE);
+    err = nopen((char*)url, TRANSLATION_NONE);
 
     if (err != SUCCESS)
     {
@@ -51,7 +52,7 @@ signed char disable_network(const char* url)
     OS.vprced=old_vprced; 
     PIA.pactl |= old_enabled;
 
-    err = nclose(url);
+    err = nclose((char*)url);
 
     if (err != SUCCESS)
     {
@@ -66,7 +67,7 @@ signed char disable_network(const char* url)
 
 signed char check_network(const char* url)
 {
-    err = nstatus(url);
+    err = nstatus((char*)url);
 
     if (err == 136)
     {
@@ -88,7 +89,7 @@ signed char check_network(const char* url)
 
 signed char write_network(const char* url, const char* buf, unsigned short len)
 {
-    err = nwrite(url, buf, len);
+    err = nwrite((char*)url, (byte*)buf, len);
 
     if (err != 1)
     {
@@ -130,7 +131,7 @@ signed char read_network(const char* url, unsigned char* buf, unsigned short len
             cprintf("\rBw %d Ttl %d Read %d\n\r", bw, len - numread, numread);
             #endif
 
-            err = nread(url, buf + numread, bw);
+            err = nread((char*)url, (byte*)(buf + numread), bw);
 
             if (err != 1)
             {

@@ -9,7 +9,7 @@
  
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
-TARGETS := atari
+TARGETS := atarixl
  
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
@@ -38,7 +38,7 @@ ASFLAGS =
 # Additional linker flags and options.
 # Default: none
 LDFLAGS = $(LDFLAGS.$(TARGETS))
-LDFLAGS.atari = --mapfile yail.map
+LDFLAGS.atarixl = --mapfile $(PROGRAM).map -Ln $(PROGRAM).lbl
  
 # Path to the directory containing C and ASM sources.
 # Default: src

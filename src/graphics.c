@@ -26,12 +26,18 @@ byte framebuffer[FRAMEBUFFER_SIZE + 32];  // 32 bytes of padding
 byte displaylist[DISPLAYLIST_SIZE];
 #pragma bss-name (pop)
 #else
+#pragma optimize(push, off)
 #pragma data-name (push,"GFX8_DL")
 #include "graphics_8_dl.h"
 #pragma data-name (pop)
+#pragma data-name (push,"GFX8_CONSOLE_DL")
 #include "graphics_8_console_dl.h"
+#pragma data-name (pop)
+#pragma data-name (push,"GFX9_CONSOLE_DL")
 #include "graphics_9_console_dl.h"
+#pragma data-name (pop)
 #endif
+#pragma optimize(pop)
 
 #define FRAMEBUFFER_BlOCK_SIZE 0x1000
 #define IS_LMS(x) (x & (byte)64)
@@ -154,16 +160,16 @@ void setGraphicsMode(const byte mode)
         case GRAPHICS_9:
         case GRAPHICS_10:
         case GRAPHICS_11:
-            OS.sdlst = graphics_8_dl;
+            OS.sdlst = &graphics_8_dl;
         break;
 
         case GRAPHICS_8_CONSOLE:
-            OS.sdlst = graphics_8_console_dl;
+            OS.sdlst = &graphics_8_console_dl;
         break;
         case GRAPHICS_9_CONSOLE:
         case GRAPHICS_10_CONSOLE:
         case GRAPHICS_11_CONSOLE:
-            OS.sdlst = graphics_9_console_dl;
+            OS.sdlst = &graphics_9_console_dl;
         break;
         #else
         default:
@@ -205,15 +211,15 @@ void makeDisplayList(byte mode)
         case GRAPHICS_9:
         case GRAPHICS_10:
         case GRAPHICS_11:
-            dlDef.address = graphics_8_dl;
+            dlDef.address = &graphics_8_dl;
         break;
         case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
-            dlDef.address = graphics_8_console_dl;
+            dlDef.address = &graphics_8_console_dl;
         break;
         case GRAPHICS_9_CONSOLE:
         case GRAPHICS_10_CONSOLE:
         case GRAPHICS_11_CONSOLE:
-            dlDef.address = graphics_9_console_dl;
+            dlDef.address = &graphics_9_console_dl;
         break;
     } // switch mode    
     #else
