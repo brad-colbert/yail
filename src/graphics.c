@@ -36,8 +36,8 @@ byte displaylist[DISPLAYLIST_SIZE];
 #pragma data-name (push,"GFX9_CONSOLE_DL")
 #include "graphics_9_console_dl.h"
 #pragma data-name (pop)
-#endif
 #pragma optimize(pop)
+#endif
 
 #define FRAMEBUFFER_BlOCK_SIZE 0x1000
 #define IS_LMS(x) (x & (byte)64)
@@ -436,6 +436,7 @@ void enableConsole()
             makeDisplayList(CURRENT_MODE);
 
             //OS.sdlst = gfxState.dl.address;
+            OS.sdlst = dlDef.address;
             ANTIC.nmien = 0x40;
 
             POKE(0x2BF, 5);
@@ -450,6 +451,7 @@ void enableConsole()
             makeDisplayList(CURRENT_MODE);
 
             //OS.sdlst = gfxState.dl.address;
+            OS.sdlst = dlDef.address;
             OS.vdslst = disable_9_dli;
             ANTIC.nmien = 0x80 | 0x40;
 
@@ -475,6 +477,7 @@ void disableConsole()
             makeDisplayList(CURRENT_MODE);
             //POKEW(SDLSTL, gfxState.dl.address);
 
+            OS.sdlst = dlDef.address;
             ANTIC.nmien = 0x40;
             OS.vdslst = VDSLIST_STATE;
 

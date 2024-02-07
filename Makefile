@@ -37,7 +37,7 @@ ASFLAGS =
  
 # Additional linker flags and options.
 # Default: none
-LDFLAGS = $(LDFLAGS.$(TARGETS))
+LDFLAGS = $(LDFLAGS.$(TARGETS)) --cpu 6502
 LDFLAGS.atarixl = --mapfile $(PROGRAM).map -Ln $(PROGRAM).lbl
  
 # Path to the directory containing C and ASM sources.

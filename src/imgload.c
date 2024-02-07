@@ -1,3 +1,6 @@
+#define USE_TEST_CODE
+#ifdef USE_TEST_CODE
+
 // Copyright (C) 2021 Brad Colbert
 #include "types.h"
 #include "netimage.h"
@@ -217,7 +220,7 @@ int main(int argc, char* argv[])
     return 0;
 }
 
-#if 0
+#else
 
 #include "console.h"
 #include "graphics.h"
