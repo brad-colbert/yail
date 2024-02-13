@@ -65,22 +65,44 @@ typedef struct _DLDef
     DLModeDef modes[MAX_MODE_DEFS]; // compact definition of the display list
 } DLDef;
 
+#if 0
 typedef struct _GfxDef
 {
     byte mode;
     DLDef dl; 
 } GfxDef;
+#endif
+
+typedef struct image_header
+{
+    unsigned char v1;
+    unsigned char v2;
+    unsigned char v3;
+    unsigned char gfx;
+    unsigned char memtkn;
+    short size;
+} ImageHeader;
+
+//
+typedef struct image_data
+{
+    ImageHeader header;
+    byte* data;
+} ImageData;
 
 void saveCurrentGraphicsState(void);
 void restoreGraphicsState(void);
 
 void makeDisplayList(byte mode);
 void setGraphicsMode(const byte mode);
-void generateDisplayList(void);
+#ifdef DEBUG_GRAPHICS
 void printDList(const char* name);
+#endif
 
-void enableConsole(void);
-void disableConsole(void);
+void clearFrameBuffer(void);
+
+void show_console(void);
+void hide_console(void);
 
 #else
 
@@ -121,8 +143,8 @@ void setGraphicsMode(const byte mode);
 
 void clearFrameBuffer(void);
 
-void enableConsole(void);
-void disableConsole(void);
+void show_console(void);
+void hide_console(void);
 
 void printDList(const char* name, DLDef* dlInfo);
 #endif

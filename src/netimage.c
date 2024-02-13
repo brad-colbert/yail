@@ -4,24 +4,35 @@
 
 //#define DEBUG
 #include "nio.h"
+#include "graphics.h"
+#include "netimage.h"
 #include "types.h"
 
 #include <atari.h>
-#ifdef DEBUG
 #include <conio.h>
-#endif
-
+#include <unistd.h>
 #include <stdbool.h>
+#include <string.h>
 
 //
 #define TRANSLATION_NONE 0
 
+//
+extern byte framebuffer[FRAMEBUFFER_SIZE];
+extern byte buff[];
+
+//
+extern ImageData image;
+
+//
+extern void ih();               // defined in intr.s
+extern byte framebuffer[];      // defined in graphics.c
+
+//
 unsigned char err;              // error code of last operation.
 unsigned char trip=0;           // if trip=1, fujinet is asking us for attention.
 bool old_enabled=false;         // were interrupts enabled for old vector
 void* old_vprced;               // old PROCEED vector, restored on exit.
-
-extern void ih();               // defined in intr.s
 
 signed char enable_network(const char* url)
 {
@@ -165,9 +176,137 @@ signed char read_network(const char* url, unsigned char* buf, unsigned short len
     return 0;
 }
 
-void loadImage(char* url, char* args[])
+void stream_image(char* url, char* args[])
 {
+    const ushort bytes_per_line = 40;
+    const ushort lines = 220;
+    ushort buffer_start;
+    ushort block_size;
+    ushort lines_per_block;
+    ushort dl_block_size;
+    ushort ttl_buff_size;
+    ushort read_size;
+    ushort i;
+
+    OS.soundr = 0; // Turn off SIO beeping sound
+
+    #if DEBUG
+    cprintf("reading from %s\n\r", url);
+    for(i = 0; args[i] != 0x0; i++)
+        cprintf("%s ", args[i]);
+    cputs("\n\r");
+    #endif
+
+    memset(buff, 0, 256);
+    memcpy(buff, "search \"", 8);
+    for(i = 0; i < 8; ++i)
+    {
+        if(args[i] == 0x0)
+            break;
+
+        if(i > 0)
+            strcat(buff, " ");
+        strcat(buff, args[i]);
+    }
+    strcat(buff, "\"");
+
+    i = strlen(buff);
+
+    #if DEBUG
+    cprintf("Sending %s\n\r", buff);
+    #endif
+
+    hide_console();
+
+    if (enable_network(url) < 0)
+    {
+        show_console();
+        cprintf("Failed to open network\n\r");
+        disable_network(url);
+        return;
+    }
+
+    if(write_network(url, buff, i) < 0)  // Send the request
+    {
+        show_console();
+        cprintf("Unable to write request\n\r");
+        disable_network(url);
+        return;
+    }
+
+    while(true)
+    {
+        if(kbhit())
+        {
+            cgetc();
+            break;
+        }
+        else
+        {
+            buffer_start = framebuffer;
+            block_size = DISPLAYLIST_BLOCK_SIZE;
+            lines_per_block = (ushort)(block_size/bytes_per_line);
+            dl_block_size = lines_per_block * bytes_per_line;
+            ttl_buff_size = lines * bytes_per_line;
+            read_size = dl_block_size;
+
+            // Read the header
+            if(read_network(url, (unsigned char*)&image.header, sizeof(image.header)) < 0)
+            {
+                show_console();
+                cprintf("Error reading\n\r");
+                disable_network(url);
+                break;
+            }
+
+            setGraphicsMode(image.header.gfx);
+
+            while(ttl_buff_size > 0)
+            {
+                if(read_size > ttl_buff_size)
+                    read_size = ttl_buff_size;
+
+                clrscr();
+                //cprintf("Start %04X Read %04X\n\r", buffer_start, read_size);
+                if(read_network(url, buffer_start, read_size) < 0)
+                {
+                    show_console();
+                    cprintf("Error reading\n\r");
+                    disable_network(url);
+                    break;
+                }
+
+                buffer_start = buffer_start + block_size;
+                ttl_buff_size = ttl_buff_size - read_size;
+            }
+
+            //sleep(5);
+            // Wait for keypress
+            i = 0;
+            while(i++ < 30000)
+                if(kbhit())
+                    break;
+
+            if(write_network(url, "next", 4) < 0)  // Send the request
+            {
+                show_console();
+                cprintf("Unable to write request\n\r");
+                break;
+            }
+        }
+    }
+
+    if(write_network(url, "quit", 4) < 0)  // Send the request
+    {
+        show_console();
+        cprintf("Unable to write request\n\r");
+    }
+
+    disable_network(url);
+
+    OS.soundr = 3; // Restore SIO beeping sound
 }
+
 
 #else
 
@@ -238,7 +377,7 @@ void loadImage(char* url, char* args[])
     img_load_done = false;
 
     #ifdef DEBUG_NETIMAGE
-//    enableConsole();
+//    show_console();
     cprintf("Opening %s\n\r", url);
     #endif
 
@@ -390,10 +529,10 @@ void loadImage(char* url, char* args[])
                 //clrscr();
                 cprintf("Read V Gfx %d\n\r", gfx);
                 cgetc();
-//                enableConsole();
+//                show_console();
                 #else
                 setGraphicsMode(gfx);
-                disableConsole();
+                hide_console();
                 #endif
 
                 seg = &gfxState.buffer.segs[seg_count++];

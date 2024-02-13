@@ -1,4 +1,5 @@
 // Copyright (C) 2021 Brad Colbert
+#define USE_ORIGINAL
 #ifndef USE_ORIGINAL
 #else
 #include "files.h"
@@ -15,8 +16,27 @@
 #include <string.h>
 #include <ctype.h> 
 
+typedef struct image_header
+{
+    unsigned char v1;
+    unsigned char v2;
+    unsigned char v3;
+    unsigned char gfx;
+    unsigned char memtkn;
+    short size;
+} ImageHeader;
+
+//
+typedef struct image_data
+{
+    ImageHeader header;
+    byte* data;
+} ImageData;
+
 // externals
-extern GfxDef gfxState;
+//extern GfxDef gfxState;
+extern ImageData image;
+extern byte buff[];
 
 // returns a token based on the filetype determined from the extension
 byte imageFileType(const char filename[])
@@ -59,6 +79,7 @@ byte imageFileType(const char filename[])
 
 void saveFile(const char filename[])
 {
+    #if 0
     int fd = open(filename, O_WRONLY);
 
     if(fd >= 0)
@@ -107,10 +128,11 @@ void saveFile(const char filename[])
         //
         close(fd);
     }
+    #endif
 }
 
 // load a file into the graphics frame buffer
-byte loadFile(const char filename[])
+byte load_image_file(const char filename[])
 {
     int fd = open(filename, O_RDONLY);
     if(fd >= 0)
@@ -123,216 +145,122 @@ byte loadFile(const char filename[])
         {
             case FILETYPE_YAI:
             {
+                const ushort BYTES_PER_LINE = 40;
+                const ushort LINES = 220;
+                const ushort BUFFER_BLOCK_SIZE = 4080;
+                byte* buffer = image.data;
+                ushort buffer_block_remaining = BUFFER_BLOCK_SIZE;
+                FileHeader header;
+                byte block_type;
+                unsigned block_size = 0;
+                size_t ttl_bytes = 0;
                 size_t n = 0;
-                byte i = 0;
-                byte maj = 0, min = 0, bld = 0;
-                byte gfx_mode = 0;
-                size_t totalBytesCopied = 0;
-                byte segCount = 0;
-                MemSeg* seg = &gfxState.buffer.segs[segCount];
-                size_t dest_buff_size = (seg->size / seg->block_size) * seg->block_size;
-                size_t dest_used = 0;
 
-                #ifdef DEBUG_FILELOAD
-                clrscr();
-                gotoxy(0,0);
-                printMemSegs(&gfxState.buffer);
-                cgetc();
-                #endif
+                // Read the header
+                n = read(fd, (void*)&header, sizeof(header));
+                ttl_bytes += n;
 
-                // Read the version #
-                n = read(fd, (void*)&maj, 1);
-                n = read(fd, (void*)&min, 1);
-                n = read(fd, (void*)&bld, 1);
+                //cprintf("Read %d bytes %d %d %d\n\r", n, header.v1, header.v2, header.v3);
 
-                // Version check.  If we are trying to load a file that is > ours
-                // we may not be able to.  Warning for now.
-                if((maj < MAJOR_VERSION) || (min < MINOR_VERSION) || (bld < BUILD_VERSION))
-                {
-                    reset_console();
-                    cprintf("Warning version: %d %d %d", maj, min, bld);
-                    //close(fd);
-                    //return 0;
-                }
+                //
+                setGraphicsMode(header.gfx); // GRAPHICS_0);//
 
-                // Read the graphics mode
-                n = read(fd, &gfx_mode, 1);
-                if(n < 1)
-                    break;
-
-                setGraphicsMode(gfx_mode);
-                disableConsole();
-                #ifdef DEBUG_FILELOAD
-                enableConsole();
-                #endif
-
-                #ifdef DEBUG_FILELOAD
-                gotoxy(0,0);clrscr();
-                cprintf("Read the graphics mode %d\n\r", gfx_mode);
-                cgetc();
-                #endif
-
-                #ifdef DEBUG_FILELOAD
-                gotoxy(0,0);clrscr();
-                cprintf("Memory segments\n\r", gfx_mode);
-                while(seg->size)
-                {
-                    if(segCount)
-                        cputs(", ");
-                    cprintf("%d: %p -> %p (%d)", segCount, seg->addr, (void*)((unsigned)seg->addr + seg->size), seg->size);
-                    ++segCount;
-                    seg = &gfxState.buffer.segs[segCount];
-                }
-                cgetc();
-                segCount = 0;
-                seg = &gfxState.buffer.segs[segCount];
-                #endif
-
+                // Read the next block of info.  We are assuming is a display list.
                 while(n > 0)
                 {
-                    // Read the type token
-                    byte type;
-                    unsigned mem_loc;
-                    size_t size;
+                    n = read(fd, (void*)&block_type, sizeof(block_type));
+                    ttl_bytes += n;
 
-                    n = read(fd, (void*)&type, 1);
-                    if(n < 1)
-                        break;
-                    #ifdef DEBUG_FILELOAD
-                    gotoxy(0,0);clrscr();
-                    cprintf("Read the type %d\n\r", type);
-                    cgetc();
-                    #endif
-
-                    if((maj == 1) && (min == 0) && (bld == 0))
+                    switch(block_type)
                     {
-                        n = read(fd, &mem_loc, 2);
-                        if(n < 1)
-                            break;
-                        #ifdef DEBUG_FILELOAD
-                        cprintf("Read the mem location %02X\n\r", mem_loc);
-                        cgetc();
-                        #endif
-                    }
-
-                    n = read(fd, &size, 2);
-                    if(n < 1)
-                        break;
-                    #ifdef DEBUG_FILELOAD
-                    gotoxy(0,0);clrscr();
-                    cprintf("Read the size %d\n\r", size);
-                    cgetc();
-                    #endif
-
-                    // for now, ignore any display list, just read and throw away.
-                    // read the image and divy up into our memory footprint.
-                    switch(type)
-                    {
-                        case MEM_TOKEN:  // Memory
+                        case DL_TOKEN:
                         {
-                            size = (size / seg->block_size) * seg->block_size;  // in block units
-                            while(size > 0)
+                            n = read(fd, (void*)&block_size, sizeof(block_size));
+                            ttl_bytes += n;
+                            n = read(fd, (void*)buff, block_size);
+                            ttl_bytes += n;
+                        }
+                        break;
+
+                        case MEM_TOKEN:
+                        {
+                            // Read how big this block is.  If the block is larger than the next memory block
+                            // we need to adjust the size that we read.  We then need to read the remaining
+                            // into the next memory block.  Going to cheat a little and assume that none of the
+                            // blocks have more than 4K of data.
+                            //unsigned next_mem_block = buffer + image_block_size;
+                            n = read(fd, (void*)&block_size, sizeof(block_size));
+                            ttl_bytes += n;
+
+                            // Check if the data we have available is greater than the current buffer block
+                            // size.  If so, we will read only enough data to fill the buffer block and then
+                            // read the remaining into the next buffer block.
+                            if(block_size > buffer_block_remaining)
                             {
-                                #ifdef DEBUG_FILELOAD
-                                gotoxy(0,0);clrscr();
-                                cprintf("Writing %d bytes\n\r", size);
-                                cgetc();
-                                #endif
+                                //cprintf("%p: %d > %d\n\r", buffer, block_size, buffer_block_remaining);
+                                // Read enough to fill the buffer block
+                                n += read(fd, (void*)buffer, buffer_block_remaining);
+                                
+                                // Move the buffer pointer to the next block
+                                buffer += buffer_block_remaining + 16;  // 16 means that the last line will not cross a 4K boundary
 
-                                if(size < dest_buff_size - dest_used)
-                                {
-                                    #ifdef DEBUG_FILELOAD
-                                    cprintf("%d < %d - %d\n\r", size, dest_buff_size, dest_used);
-                                    cgetc();
-                                    #endif
+                                // Read the remaining data into the next buffer block
+                                n += read(fd, (void*)buffer, block_size - buffer_block_remaining);
 
-                                    n = read(fd, (void*)((size_t)seg->addr + dest_used), size);
-                                    if(n < 1)
-                                        break;
-
-                                    #ifdef DEBUG_FILELOAD
-                                    cprintf("Wrote %db to %p (%d)\n\r", n, (void*)((size_t)seg->addr + dest_used), size);
-                                    #endif
-
-                                    dest_used += n;
-                                }
-                                else
-                                {
-                                    #ifdef DEBUG_FILELOAD
-                                    cprintf("%d: %d >= %d - %d\n\r", segCount, size, dest_buff_size, dest_used);
-                                    cgetc();
-                                    #endif
-
-                                    n = read(fd, (void*)((size_t)seg->addr + dest_used), dest_buff_size - dest_used);
-                                    if(n < 1)
-                                        break;
-
-                                    #ifdef DEBUG_FILELOAD
-                                    cprintf("Wrote %db to %p (%d) %d rem\n\r", n, (void*)((size_t)seg->addr + dest_used), dest_buff_size - dest_used, size-n);
-                                    #endif
-
-                                    ++segCount;
-                                    seg = &gfxState.buffer.segs[segCount];
-                                    dest_buff_size = (seg->size / seg->block_size) * seg->block_size;
-                                    dest_used = 0;
-
-                                    #ifdef DEBUG_FILELOAD
-                                    cprintf("New seg[%d] %p of %d\n\r", segCount, seg->addr, dest_buff_size);
-                                    #endif
-                                }
-
-
-                                size -= n;                                
-
-                                #ifdef DEBUG_FILELOAD
-                                cgetc();
-                                #endif
+                                // Reset the buffer block remaining
+                                //cprintf("%p: %d = %d - (%d - %d)\n\r", buffer, (BUFFER_BLOCK_SIZE - (block_size - buffer_block_remaining)), BUFFER_BLOCK_SIZE, block_size, buffer_block_remaining);
+                                buffer += (block_size - buffer_block_remaining);
+                                buffer_block_remaining = BUFFER_BLOCK_SIZE - (block_size - buffer_block_remaining);
                             }
+                            else
+                            {
+                                //cprintf("%p: %d !> %d\n\r", buffer, block_size, buffer_block_remaining);
+                                n += read(fd, (void*)buffer, block_size);
+                                buffer += block_size;
+                                //cprintf("%p: %d = %d - %d\n\r", buffer, (buffer_block_remaining - block_size), buffer_block_remaining, block_size);
+                                buffer_block_remaining -= block_size;
+                            }
+
+                            ttl_bytes += n;
+                            //cprintf("\n\r", block_size);
                         }
                         break;
-
                         default:
-                        {
-                            void* temp = malloc(size);
-                            n = read(fd, temp, size);
-                            free(temp);
+                            n = 0;
+                    }
+                }
 
-                            #ifdef DEBUG_FILELOAD
-                            gotoxy(0,0);clrscr();
-                            cprintf("Read %d of data (DL/DLI)", n);
-                            cgetc();
-                            #endif
-                        }
-                        break;
-                    } // switch type
-                } // while n
+                return n;
             }
             break;
             
             case FILETYPE_PBM:
             case FILETYPE_PGM:
-                //disableConsole();
-
+            #if 0
                 switch(file_type)
                 {
                     case FILETYPE_PBM:
-                        disableConsole();
+                        hide_console();
                         setGraphicsMode(GRAPHICS_8);
                         readPBM(fd);
                         break;
                     case FILETYPE_PGM:
-                        disableConsole();
+                        hide_console();
                         setGraphicsMode(GRAPHICS_9);
                         readPGM(fd);
                         break;
                 };
+                #endif
             break; 
         }
 
         close(fd);
     }
     else
-        cprintf("ERROR: Problem opening file %s", filename);
+    {
+        cprintf("ERROR: Problem opening file %d:*%s*", strlen(filename), filename);
+        cgetc();
+    }
 
     return 0;
 }

@@ -36,8 +36,17 @@ struct mem_store
 #define MAX_N_MEM 8
 #define MEM_TOKEN 0x03
 
+typedef struct file_header
+{
+    unsigned char v1;
+    unsigned char v2;
+    unsigned char v3;
+    unsigned char gfx;
+} FileHeader;
+
+
 byte imageFileType(const char filename[]);
-byte loadFile(const char filename[]);
+byte load_image_file(const char filename[]);
 void saveFile(const char filename[]);
 
 #endif // FILES_H

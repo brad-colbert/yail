@@ -25,7 +25,7 @@ void graphics_9_console_dl = {
     DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9,
     DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9, DL_GRAPHICS9,
     // 5 text lines
-    DL_DLI(DL_GRAPHICS9), DL_GRAPHICS9,                                                             // DLI disables the graphics 9 state (GTIA)
+    DL_GRAPHICS9, DL_DLI(DL_GRAPHICS9),                                                             // DLI disables the graphics 9 state (GTIA)
     DL_LMS(DL_GRAPHICS0), 0x2040, DL_GRAPHICS0, DL_GRAPHICS0, DL_GRAPHICS0, DL_DLI(DL_GRAPHICS0),   // DLI enables the graphics 9 state (GTIA)
     DL_JVB, &graphics_9_console_dl
 };

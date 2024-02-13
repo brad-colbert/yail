@@ -13,36 +13,26 @@
 #include <fcntl.h>
 #include <stdio.h>
 #include <string.h>
-
-// Defines
-#define CONSOLE_LINES 5
-#define CONSOLE_HIDDEN 0
-#define CONSOLE_SHOWN 1
-#define MAX_LINE_LEN 40
+#include <stdbool.h>
 
 // Externs
+extern bool done;
 extern byte IMAGE_FILE_TYPE;
 
 // Globals
 byte console_lines = CONSOLE_LINES;
-byte console_state = CONSOLE_HIDDEN;
+extern bool console_state;
 #ifdef CONSOLE_USE_LOCAL_BUFFER
 char console_buff[GFX_0_MEM_LINE * CONSOLE_LINES];
 #else
-char* console_buff = 0x0;
+byte* console_buff = 0x2040;
 #endif
 char* tokens[] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 tokens
-byte done = FALSE;
 char server[80] = { "N:TCP://192.168.1.205:9999/\"\0" };
 
-#ifndef USE_ORIGINAL
-void reset_console(void)
-{}
-
-#else
 void reset_console(void)
 {
-    memset(console_buff, 0, GFX_0_MEM_LINE * console_lines); // wipe all of the console mem
+    memset(console_buff, 0, GFX_0_MEM_LINE * 24);//console_lines); // wipe all of the console mem
     gotoxy(0,0);                   // start at the begining of the input line
 }
 
@@ -75,6 +65,10 @@ byte get_tokens(byte* buff, byte endx)
         }
     }
 
+    // Fix last token.  For some strange reason, the last token is ending with 0x80
+    i = strlen(tokens[count-1]);
+    tokens[count-1][i-1] = 0x0;
+
     #ifdef DEBUG_CONSOLE
     gotoxy(0,2);
     cprintf("%p  ", &tokens[0]);
@@ -92,18 +86,10 @@ void fix_chars(char* buff)
     byte i;
     for(i=0;i<MAX_LINE_LEN;++i)
     {
-        if(buff[i] <= 63)
-            buff[i] += 32;
-        /*
-        if(buff[i] == 0x0E)   // Change _ to .
-            buff[i] = 0x2E;
-        else if(buff[i] == 26) // :
-            buff[i] = 58;
-        else if(buff[i] > 15 && buff[i] < 26)
-            buff[i] += 32;
-            */
+        if(buff[i])  // leave the null terminator
+            if(buff[i] <= 63)
+                buff[i] += 32;
     }
-        
 }
 
 void process_command(byte ntokens)
@@ -113,24 +99,15 @@ void process_command(byte ntokens)
 
     if(strncmp(tokens[0], "help", 4) == 0)
     {
-        byte old_console_lines = console_lines;
         const char help[] =
-        "help - This screan\n\r"
         "quit - Exit this utility\n\r"
         "cls  - Clear the image display\n\r"
         "gfx  - [0,8,9] Set the graphics mode\n\r"
         "load - [filename] Load and display file\n\r"
-        "save - [filename] Save memory to YAI\n\r"
-        "\n\r"
-        "Any key to continue...\n\r";
+        "save - [filename] Save memory to YAI\n\r";
 
-        console_lines = 8;
-        enableConsole();
-        reset_console();
         cputs(help);                              // Show the help text
         cgetc();                                  // Wait
-        clrscr();
-        console_lines = old_console_lines;
     }
 
     if(strncmp(tokens[0], "quit", 4) == 0)
@@ -179,18 +156,20 @@ void process_command(byte ntokens)
         if(ntokens > 1)
         {
             fix_chars(tokens[1]);
-            loadFile(tokens[1]);
+            load_image_file(tokens[1]);
         }
         else
         {
             gotoxy(0,0);
             clrscr();
-            cprintf("ERROR: File not specified");
+            cputs("ERROR: File not specified");
+            cgetc();
         }
     }
 
     if(strncmp(tokens[0], "save", 4) == 0)
     {
+        /*
         if(ntokens > 1)
             saveFile(tokens[1]);
 
@@ -199,6 +178,7 @@ void process_command(byte ntokens)
             gotoxy(0,0);
             cprintf("ERROR: File not specified");
         }
+        */
     }
 
     if(strncmp(tokens[0], "set", 3) == 0)
@@ -206,7 +186,8 @@ void process_command(byte ntokens)
         if(ntokens < 3)
         {
             gotoxy(0,0);
-            cprintf("ERROR: Must specify a setting and value");
+            cputs("ERROR: Must specify a setting and value");
+            cgetc();
         }
         else
         {
@@ -222,26 +203,33 @@ void process_command(byte ntokens)
         if(ntokens < 2)
         {
             gotoxy(0,0);
-            cprintf("ERROR: Genre not specified");
+            cputs("ERROR: Search tokens not specified");
+            cgetc();
         }
         else
         {
-            loadImage(server, &tokens[1]);
+            #ifdef DEBUG_CONSOLE
+            byte i;
+            for(i = 0; tokens[i] != 0x0; i++)
+                cprintf("*%s ", tokens[i]);
+
+            cputs("\n\r");
+            #endif
+
+            stream_image(server, &tokens[1]);
         }
     }
-
-
 }
 
-void console_update(void)
+void start_console(void)
 {
     byte x = 0;
-    if(!console_buff)
-        console_buff = OS.savmsc;
 
     reset_console();
 
-    while(!done)
+    cursor(1);
+
+    while(true)
     {
         byte input = cgetc();
         byte x = wherex();
@@ -275,9 +263,7 @@ void console_update(void)
                 cgetc();
                 #endif
 
-                cursor(0);
-
-                ntokens = get_tokens(buff, x + 1);
+                ntokens = get_tokens(buff, x);// + 1);
 
                 #ifdef DEBUG_CONSOLE
                 gotoxy(0,4);
@@ -313,26 +299,14 @@ void console_update(void)
 
                 if(ntokens > 0)
                 {
-                    console_state = FALSE;
-                    disableConsole();
-
+                    reset_console();
                     process_command(ntokens);
-                }
-                else
-                {
-                    if(console_state)
-                    {
-                        console_state = FALSE;
-                        disableConsole();
-                    }
-                    else
-                    {
-                        console_state = TRUE;
-                        enableConsole();
-                    }
                 }
 
                 reset_console();
+                hide_console();
+                cursor(0);
+                return;
             }
             break;
 
@@ -358,13 +332,10 @@ void console_update(void)
                 #endif
                 if(!console_state)
                 {
-                    console_state = TRUE;
-                    enableConsole();
+                    console_state = true;
+                    show_console();
                 }
-
-                cursor(1);
                 cputc(input);
         }
     }
 }
-#endif

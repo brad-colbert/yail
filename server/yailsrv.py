@@ -170,8 +170,27 @@ def convertToYai(image):
     import struct
 
     gray = image.convert(mode='LA')
-    scaled = gray.resize((80,220), Image.LANCZOS)
-    gray_dither = scaled.convert(dither=Image.FLOYDSTEINBERG, colors=16)
+    aspect = gray.size[0]/gray.size[1]
+    print("Original size:", gray.size, f'4/{4*(1/aspect)}')
+
+    if aspect > 4/3:  # wider than 4:3
+        new_height = int(gray.size[0] * (3/4))
+        background = Image.new("LA", (gray.size[0],new_height))
+        background.paste(gray, (0, int((new_height-gray.size[1])/2)))
+        gray = background
+        print(f'Wider than 4:3  :  {gray.size[1]}->{new_height}')
+    else:             # taller than 4:3
+        new_width = int(gray.size[1] * (4/3))
+        background = Image.new("LA", (new_width, gray.size[1]))
+        background.paste(gray, (int((new_width-gray.size[0])/2), 0))
+        gray = background
+        print(f'Taller than 4:3  :  {gray.size[0]}->{new_width}')
+
+    gray = gray.resize((80,220), Image.LANCZOS)
+
+    gray_dither = gray.convert(dither=Image.FLOYDSTEINBERG, colors=16)
+
+    #gray_dither.resize((640,440), Image.NEAREST).show()
 
     im_matrix = np.array(gray_dither)
 
@@ -360,6 +379,7 @@ def handle_client_connection(client_socket):
         url_idx = 0
         while not done:
             request = client_socket.recv(1024)
+            pprint(request)
             r_string = request.decode('UTF-8')
             tokens = r_string.rstrip(' \r\n').split(' ')
             print(tokens)
@@ -368,6 +388,8 @@ def handle_client_connection(client_socket):
                 done = True
 
             elif tokens[0] == 'search':
+                for t in tokens:
+                    print('*', t)
                 urls = search_images(' '.join(tokens[1:]))
                 print(urls)
                 url_idx = random.randint(0, len(urls)-1)

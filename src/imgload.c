@@ -1,4 +1,4 @@
-#define USE_TEST_CODE
+//#define USE_TEST_CODE
 #ifdef USE_TEST_CODE
 
 // Copyright (C) 2021 Brad Colbert
@@ -47,6 +47,8 @@ struct image_data image;
 int main(int argc, char* argv[])
 {
     ushort i = 0;
+    //const char search_terms[] = "search \"airplane piper comanche pa24\"";
+    //const size_t search_length = sizeof(search_terms);
 
     saveCurrentGraphicsState();
 
@@ -54,7 +56,7 @@ int main(int argc, char* argv[])
     for(; i < FRAMEBUFFER_SIZE+32; ++i)
         framebuffer[i] = i%(ushort)256;
 
-    //#define LOAD_IMAGES
+    #define LOAD_IMAGES
     #ifdef LOAD_IMAGES
     // Make sure the image data is pointing to the correct thing
     image.data = framebuffer;
@@ -78,7 +80,8 @@ int main(int argc, char* argv[])
         return -1;
     }
 
-    if(write_network(url, "search apod astronomy", 12) < 0)  // Send the request
+    //if(write_network(url, "search apod astronomy", 12) < 0)  // Send the request
+    if(write_network(url, "search \"airplane piper comanche pa24\"", 38) < 0)  // Send the request
     {
         cprintf("Unable to write request\n\r");
         disable_network(url);
@@ -89,7 +92,7 @@ int main(int argc, char* argv[])
 
     //setGraphicsMode(image.header.gfx);
     setGraphicsMode(GRAPHICS_9);
-    //enableConsole();
+    //show_console();
 
     #define READ_IMAGE_IN_BLOCKS
     #ifdef READ_IMAGE_IN_BLOCKS
@@ -122,7 +125,7 @@ int main(int argc, char* argv[])
                 read_size = dl_block_size;
 
                 // Show loading messages
-                //enableConsole();
+                //show_console();
 
                 // Read the header
                 if(read_network(url, (unsigned char*)&image.header, sizeof(image.header)) < 0)
@@ -151,7 +154,7 @@ int main(int argc, char* argv[])
                 }
 
                 // Hide messages and show only the image
-                //disableConsole();
+                //hide_console();
 
                 sleep(5);
 
@@ -197,12 +200,12 @@ int main(int argc, char* argv[])
                 
                 if(console)
                 {
-                    disableConsole();
+                    hide_console();
                     console = false;
                 }
                 else
                 {
-                    enableConsole();
+                    show_console();
                     console = true;
                 }
             }
@@ -234,24 +237,48 @@ int main(int argc, char* argv[])
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+
+// Externs
+extern byte framebuffer[]; 
 
 //
-extern GfxDef gfxState;
-extern char server[80];
-const char* terms[] = {"funny", 0x0};
+char buff[256]; // A block of memory to be used by all.
+bool done = false;
+bool console_state = false;
 
 //
 int main(int argc, char* argv[])
 {
-    byte i = 0;
+    int i;
 
     // Clear the edit buffer so as not to confuse our console code.
     clrscr();
 
-    // Initialize everything
-    memset(&gfxState, 0, sizeof(GfxDef));
+    // Initialize the frame buffer
+    saveCurrentGraphicsState();
+    setGraphicsMode(GRAPHICS_8);
+    clearFrameBuffer();
 
-    loadImage(server, terms);
+    // init the frame buffer
+    //for(i = 0; i < FRAMEBUFFER_SIZE+32; ++i)
+    //    framebuffer[i] = i%(ushort)256;
+
+    while(!done)
+    {
+        if(kbhit())
+        {
+            if(cgetc() == CH_ESC)
+                break;
+            
+            show_console();
+            start_console();
+        }
+    }
+
+    setGraphicsMode(GRAPHICS_0);
+    restoreGraphicsState();
+    clrscr();
 
     #if 0
     gfxState.dl.address = NULL;  // make sure it gets created
@@ -266,10 +293,10 @@ int main(int argc, char* argv[])
 
     else
         // Start user input.
-        enableConsole();
+        show_console();
 
     console_update();
-    disableConsole();
+    hide_console();
 
     // Restore the graphics state back to the starting state.
     setGraphicsMode(GRAPHICS_0);
