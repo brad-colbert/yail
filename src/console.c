@@ -25,7 +25,7 @@ extern bool console_state;
 #ifdef CONSOLE_USE_LOCAL_BUFFER
 char console_buff[GFX_0_MEM_LINE * CONSOLE_LINES];
 #else
-byte* console_buff = 0x2040;
+byte* console_buff = (byte*)0x2040;
 #endif
 char* tokens[] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 tokens
 char server[80] = { "N:TCP://192.168.1.205:9999/\"\0" };
@@ -51,7 +51,7 @@ byte get_tokens(byte* buff, byte endx)
             case SEARCHING_FOR_TOKEN:
                 if(buff[i] != 0x0)
                 {
-                    tokens[count] = &buff[i];
+                    tokens[count] = (char*)&buff[i];
                     state = START_OF_TOKEN;
                     ++count;
                 }
@@ -221,7 +221,7 @@ void process_command(byte ntokens)
     }
 }
 
-void start_console(void)
+void start_console(char first_char)
 {
     byte x = 0;
 
@@ -231,7 +231,7 @@ void start_console(void)
 
     while(true)
     {
-        byte input = cgetc();
+        byte input = first_char?first_char:cgetc();
         byte x = wherex();
 
         // Handle quit
@@ -337,5 +337,7 @@ void start_console(void)
                 }
                 cputc(input);
         }
+
+        first_char = 0x00;
     }
 }

@@ -1,5 +1,6 @@
 // Copyright (C) 2021 Brad Colbert
 
+#define USE_ORIGINAL
 #ifndef USE_ORIGINAL
 #else
 // Read routines for the NetPBM formats (PBM, PGM, so far)
@@ -20,11 +21,13 @@
 
 // Globals
 byte IMAGE_FILE_TYPE = 0;
-extern GfxDef gfxState;
+//extern GfxDef gfxState;
+extern byte buff[];
+extern byte framebuffer[];      // defined in graphics.c
 
 // Locals
 int count;
-byte b, buff[256];
+byte b;
 int w = 0;
 int h = 0;
 int mxp = 16; // max pixel value
@@ -120,6 +123,7 @@ int readHeader(int fd)
 // Assumes destination will be Gfx8 formatted
 void readPBM(int fd)
 {
+    #if 0
     unsigned numbytes = 0;
     unsigned numread = 0;
     byte i = 0;
@@ -139,12 +143,49 @@ void readPBM(int fd)
 
         ++i;
     }
+    #else
+    const ushort bytes_per_line = 40;
+    const ushort lines = 220;
+    ushort buffer_start;
+    ushort block_size;
+    ushort lines_per_block;
+    ushort dl_block_size;
+    ushort ttl_buff_size;
+    ushort read_size;
+    
+    readHeader(fd);
+
+    buffer_start = framebuffer;
+    block_size = DISPLAYLIST_BLOCK_SIZE;
+    lines_per_block = (ushort)(block_size/bytes_per_line);
+    dl_block_size = lines_per_block * bytes_per_line;
+    ttl_buff_size = lines * bytes_per_line;
+    read_size = dl_block_size;
+
+    while(ttl_buff_size > 0)
+    {
+        if(read_size > ttl_buff_size)
+            read_size = ttl_buff_size;
+
+        if(read(fd, buffer_start, read_size) < 0)
+        {
+            show_console();
+            cprintf("Error reading\n\r");
+            break;
+        }
+
+        buffer_start = buffer_start + block_size;
+        ttl_buff_size = ttl_buff_size - read_size;
+    }
+
+    #endif
 }
 
 // Reads a file from fb and writes numbytes of it into dmem.
 // Assumes destination will be Gfx9 formatted
 void readPGM(int fd)
 {
+    #if 0
     unsigned numbytes = 0;
     unsigned count = 0;
     byte segcount = 0;
@@ -210,5 +251,48 @@ void readPGM(int fd)
 
         ++segcount;
     }
+    #else
+    const ushort bytes_per_line = 40;
+    const ushort lines = 220;
+    const ushort lines_per_block = (ushort)(DISPLAYLIST_BLOCK_SIZE/bytes_per_line);
+    const ushort dl_block_size = lines_per_block * bytes_per_line;
+    ushort buffer_start;
+    ushort ttl_buff_size;
+    ushort read_size;
+    
+    readHeader(fd);
+
+    // Parse the maximum pixel value
+    {
+    int i;
+    for(i = 0; i < count; ++i)
+    {
+        unsigned digit = (unsigned)(buff[i] - ASC_0);
+        mxp += pow10(digit, count - (i+1));
+    }
+    } 
+
+    buffer_start = framebuffer;
+    ttl_buff_size = lines * bytes_per_line;
+    read_size = dl_block_size;
+
+    while(ttl_buff_size > 0)
+    {
+        if(read_size > ttl_buff_size)
+            read_size = ttl_buff_size;
+
+        if(read(fd, buffer_start, read_size) < 0)
+        {
+            show_console();
+            cprintf("Error reading\n\r");
+            cgetc();
+            break;
+        }
+
+        buffer_start = buffer_start + DISPLAYLIST_BLOCK_SIZE;
+        ttl_buff_size = ttl_buff_size - read_size;
+    }
+
+    #endif
 }
 #endif

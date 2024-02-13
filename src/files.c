@@ -37,6 +37,8 @@ typedef struct image_data
 //extern GfxDef gfxState;
 extern ImageData image;
 extern byte buff[];
+extern byte CURRENT_MODE;
+extern void graphics_9_console_dl;
 
 // returns a token based on the filetype determined from the extension
 byte imageFileType(const char filename[])
@@ -79,14 +81,16 @@ byte imageFileType(const char filename[])
 
 void saveFile(const char filename[])
 {
-    #if 0
+    #if 1
     int fd = open(filename, O_WRONLY);
 
     if(fd >= 0)
     {
-        byte segCount = 0;
-        MemSeg* seg = &gfxState.buffer.segs[segCount];
-        byte i = 0, b;
+        //byte segCount = 0;
+        //MemSeg* seg = &gfxState.buffer.segs[segCount];
+        //byte i = 0, b;
+        size_t size = 0;
+        byte b;
 
         // Write the version
         b = MAJOR_VERSION;
@@ -97,15 +101,34 @@ void saveFile(const char filename[])
         write(fd, &b, 1);
 
         // Write the graphics mode
-        b = gfxState.mode & ~GRAPHICS_CONSOLE_EN;
+        b = CURRENT_MODE & ~GRAPHICS_CONSOLE_EN;
         write(fd, &b, 1);
 
         // Write the DLs
         b = DL_TOKEN;
         write(fd, &b, 1);
-        write(fd, &gfxState.dl.size, sizeof(unsigned));
-        write(fd, gfxState.dl.address, gfxState.dl.size);
+        write(fd, &OS.sdlst, sizeof(unsigned));
+        size = 199;
+        write(fd, OS.sdlst, size);
 
+        {
+            size = 4080;
+            b = MEM_TOKEN;
+            write(fd, &b, 1);
+            write(fd, &size, sizeof(size_t));
+            write(fd, image.data, size);
+
+            write(fd, &b, 1);
+            write(fd, &size, sizeof(size_t));
+            write(fd, (image.data+0x1000), size);
+
+            size = 640;
+            write(fd, &b, 1);
+            write(fd, &size, sizeof(size_t));
+            write(fd, (image.data+0x1000), size);
+        }
+
+        #if 0
         // Write the image
         while(seg->size)
         {
@@ -124,6 +147,7 @@ void saveFile(const char filename[])
             ++segCount;
             seg = &gfxState.buffer.segs[segCount];
         }
+        #endif
 
         //
         close(fd);
@@ -236,7 +260,6 @@ byte load_image_file(const char filename[])
             
             case FILETYPE_PBM:
             case FILETYPE_PGM:
-            #if 0
                 switch(file_type)
                 {
                     case FILETYPE_PBM:
@@ -247,10 +270,10 @@ byte load_image_file(const char filename[])
                     case FILETYPE_PGM:
                         hide_console();
                         setGraphicsMode(GRAPHICS_9);
-                        readPGM(fd);
+                        //readPGM(fd);
+                        readPBM(fd);
                         break;
                 };
-                #endif
             break; 
         }
 

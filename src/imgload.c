@@ -250,8 +250,6 @@ bool console_state = false;
 //
 int main(int argc, char* argv[])
 {
-    int i;
-
     // Clear the edit buffer so as not to confuse our console code.
     clrscr();
 
@@ -268,11 +266,12 @@ int main(int argc, char* argv[])
     {
         if(kbhit())
         {
-            if(cgetc() == CH_ESC)
+            char ch = cgetc();
+            if(ch == CH_ESC)
                 break;
             
             show_console();
-            start_console();
+            start_console(ch);
         }
     }
 
