@@ -7,6 +7,7 @@ PRODUCT=YAIL
 TARGET=atarixl
 SRC_DIR=src
 CFLAGS=-Or
+LIBRARIES=fujinet-lib/fujinet-atari-2.2.1.lib
 
 .SUFFIXES:
 .SUFFIXES: .c .s .o
@@ -22,13 +23,13 @@ s_files: $(SRC_DIR)\*.s
     @$(MAKE) -nologo /f Makefile.mak $(**:.s=.o)
 
 link_files: $(SRC_DIR)\*.o
-    $(CL65) -t $(TARGET) $(CFLAGS) -D__SYSTEM_CHECK__=1 -o $(PRODUCT).XEX --config $(SRC_DIR)\$(PRODUCT).$(TARGET)-xex.cfg --mapfile $(PRODUCT).map -Ln $(PRODUCT).lbl $(**) $(TARGET).lib
+    $(CL65) -t $(TARGET) $(CFLAGS) -D__SYSTEM_CHECK__=1 -o $(PRODUCT).XEX --config $(SRC_DIR)\$(PRODUCT).$(TARGET)-xex.cfg --mapfile $(PRODUCT).map -Ln $(PRODUCT).lbl $(**) $(TARGET).lib $(LIBRARIES)
 
 .s.o:
   $(CA65) -t $(TARGET) $<
 
 .c.s:
-  $(CC65) -t $(TARGET) $(CFLAGS) $<
+  $(CC65) -t $(TARGET) $(CFLAGS) -I fujinet-lib/ $<
 
 $(PRODUCT).XEX: c_files s_files link_files
 
