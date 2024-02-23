@@ -1,4 +1,4 @@
-	;; Call SIO
+	;; Call SIO  From TC
 
 	.export _siov
 	.export _rtclr

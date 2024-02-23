@@ -169,7 +169,6 @@ void process_command(byte ntokens)
 
     if(strncmp(tokens[0], "save", 4) == 0)
     {
-        /*
         if(ntokens > 1)
             saveFile(tokens[1]);
 
@@ -177,8 +176,8 @@ void process_command(byte ntokens)
         {
             gotoxy(0,0);
             cprintf("ERROR: File not specified");
+            cgetc();
         }
-        */
     }
 
     if(strncmp(tokens[0], "set", 3) == 0)

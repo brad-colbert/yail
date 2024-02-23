@@ -13,7 +13,8 @@ TARGETS := atarixl
  
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
-PROGRAM := yail
+PROJECT := YAIL
+PROGRAM := $(PROJECT)
  
 # Path(s) to additional libraries required for linking the program
 # Use only if you don't want to place copies of the libraries in SRCDIR
@@ -28,8 +29,8 @@ CONFIG  :=
 # Additional C compiler flags and options.
 # Default: none
 #CFLAGS  = -Oris
-#CFLAGS  = -Or
-CFLAGS  = -O
+CFLAGS  = -Or
+#CFLAGS  = -O
  
 # Additional assembler flags and options.
 # Default: none
@@ -164,7 +165,7 @@ plus4_EMUCMD := $(VICE_HOME)xplus4 -TEDdsize -autoload
 c16_EMUCMD := $(VICE_HOME)xplus4 -ramsize 16 -TEDdsize -autoload
 cbm510_EMUCMD := $(VICE_HOME)xcbm2 -model 510 -VICIIdsize -autoload
 cbm610_EMUCMD := $(VICE_HOME)xcbm2 -model 610 -Crtcdsize -autoload
-atari_EMUCMD := atari800 -windowed -xl -pal -nopatchall -run
+atari_EMUCMD := atari800 -windowed -run
  
 ifeq ($(EMUCMD),)
   EMUCMD = $($(CC65TARGET)_EMUCMD)
@@ -248,8 +249,8 @@ ifneq ($(word 2,$(CONFIG)),)
 endif
 
 RMDIR = $(RM) -r
-DIR2ATR ?= dir2atr
-DISK     = yail.atr
+DIR2ATR ?= unix2atr
+DISK     = $(PROJECT).ATR
  
 .SUFFIXES:
 .PHONY: all test clean zap love
@@ -355,7 +356,6 @@ love:
 #	cp imgload atr/autorun.sys
 define ATR_WRITE_recipe
 cp $(file) atr/$(notdir $(file))
-#cp images/Funn43c6.yai atr/$(notdir $(file))
 endef # ATR_WRITE_recipe
 $(DISK): $(PROGRAM)
 #	@mkdir atr
@@ -363,7 +363,7 @@ $(DISK): $(PROGRAM)
 #	# @$(foreach file,images/Funn43c6.yai,$(ATR_WRITE_recipe))
 #	$(DIR2ATR) -D -b DosXL230 $@ atr
 	cp $(PROGRAM) atr
-	$(DIR2ATR) -d -D -b DosXL230 $@ atr
+	$(DIR2ATR) -up 720 $@ atr
 #	@$(RMDIR) atr
 
 ###################################################################

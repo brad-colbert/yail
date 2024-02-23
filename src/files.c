@@ -1,7 +1,4 @@
 // Copyright (C) 2021 Brad Colbert
-#define USE_ORIGINAL
-#ifndef USE_ORIGINAL
-#else
 #include "files.h"
 #include "console.h"
 #include "readNetPBM.h"
@@ -16,25 +13,7 @@
 #include <string.h>
 #include <ctype.h> 
 
-typedef struct image_header
-{
-    unsigned char v1;
-    unsigned char v2;
-    unsigned char v3;
-    unsigned char gfx;
-    unsigned char memtkn;
-    short size;
-} ImageHeader;
-
-//
-typedef struct image_data
-{
-    ImageHeader header;
-    byte* data;
-} ImageData;
-
 // externals
-//extern GfxDef gfxState;
 extern ImageData image;
 extern byte buff[];
 extern byte CURRENT_MODE;
@@ -81,14 +60,10 @@ byte imageFileType(const char filename[])
 
 void saveFile(const char filename[])
 {
-    #if 1
     int fd = open(filename, O_WRONLY);
 
     if(fd >= 0)
     {
-        //byte segCount = 0;
-        //MemSeg* seg = &gfxState.buffer.segs[segCount];
-        //byte i = 0, b;
         size_t size = 0;
         byte b;
 
@@ -128,31 +103,9 @@ void saveFile(const char filename[])
             write(fd, (image.data+0x1000), size);
         }
 
-        #if 0
-        // Write the image
-        while(seg->size)
-        {
-            size_t size = (seg->size / seg->block_size) * seg->block_size;
-            b = MEM_TOKEN;
-            write(fd, &b, 1);
-            write(fd, &size, sizeof(size_t));
-            write(fd, seg->addr, size);
-
-            #ifdef DEBUG_FILELOAD
-            gotoxy(0,0);clrscr();
-            cprintf("%d: Wrote %d\n\r", segCount, size);
-            cgetc();
-            #endif
-
-            ++segCount;
-            seg = &gfxState.buffer.segs[segCount];
-        }
-        #endif
-
         //
         close(fd);
     }
-    #endif
 }
 
 // load a file into the graphics frame buffer
@@ -184,10 +137,8 @@ byte load_image_file(const char filename[])
                 n = read(fd, (void*)&header, sizeof(header));
                 ttl_bytes += n;
 
-                //cprintf("Read %d bytes %d %d %d\n\r", n, header.v1, header.v2, header.v3);
-
                 //
-                setGraphicsMode(header.gfx); // GRAPHICS_0);//
+                setGraphicsMode(header.gfx);
 
                 // Read the next block of info.  We are assuming is a display list.
                 while(n > 0)
@@ -221,7 +172,6 @@ byte load_image_file(const char filename[])
                             // read the remaining into the next buffer block.
                             if(block_size > buffer_block_remaining)
                             {
-                                //cprintf("%p: %d > %d\n\r", buffer, block_size, buffer_block_remaining);
                                 // Read enough to fill the buffer block
                                 n += read(fd, (void*)buffer, buffer_block_remaining);
                                 
@@ -232,21 +182,17 @@ byte load_image_file(const char filename[])
                                 n += read(fd, (void*)buffer, block_size - buffer_block_remaining);
 
                                 // Reset the buffer block remaining
-                                //cprintf("%p: %d = %d - (%d - %d)\n\r", buffer, (BUFFER_BLOCK_SIZE - (block_size - buffer_block_remaining)), BUFFER_BLOCK_SIZE, block_size, buffer_block_remaining);
                                 buffer += (block_size - buffer_block_remaining);
                                 buffer_block_remaining = BUFFER_BLOCK_SIZE - (block_size - buffer_block_remaining);
                             }
                             else
                             {
-                                //cprintf("%p: %d !> %d\n\r", buffer, block_size, buffer_block_remaining);
                                 n += read(fd, (void*)buffer, block_size);
                                 buffer += block_size;
-                                //cprintf("%p: %d = %d - %d\n\r", buffer, (buffer_block_remaining - block_size), buffer_block_remaining, block_size);
                                 buffer_block_remaining -= block_size;
                             }
 
                             ttl_bytes += n;
-                            //cprintf("\n\r", block_size);
                         }
                         break;
                         default:
@@ -270,7 +216,7 @@ byte load_image_file(const char filename[])
                     case FILETYPE_PGM:
                         hide_console();
                         setGraphicsMode(GRAPHICS_9);
-                        //readPGM(fd);
+                        readPGM(fd);    // on hold for now
                         readPBM(fd);
                         break;
                 };
@@ -287,4 +233,3 @@ byte load_image_file(const char filename[])
 
     return 0;
 }
-#endif

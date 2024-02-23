@@ -36,9 +36,6 @@ byte framebuffer[FRAMEBUFFER_SIZE + 32];  // 32 bytes of padding
 #define IS_LMS(x) (x & (byte)64)
 
 //
-//void printModeDefs(DLModeDef modeDefs[]);
-
-//
 extern char* console_buff;
 extern byte console_lines;
 
@@ -50,7 +47,7 @@ byte NMI_STATE = 0x0;
 byte ORG_COLOR1, ORG_COLOR2;
 byte CURRENT_MODE = 0;
 DLDef dlDef;
-ImageData image = { 0, 0, 0, 0, 0, 0, framebuffer };
+ImageData image = { {0, 0, 0, 0, 0, 0}, framebuffer };
 
 // DLI definitions
 void disable_9_dli(void);  // prototype for below
@@ -101,7 +98,6 @@ void saveCurrentGraphicsState(void)
     ORG_GPRIOR = OS.gprior;       // Save current priority states
     ORG_COLOR1 = OS.color1;
     ORG_COLOR2 = OS.color2;
-    //CONSOLE_MEM = PEEKW(SAVMSC);
 }
 
 void restoreGraphicsState(void)
@@ -115,7 +111,6 @@ void restoreGraphicsState(void)
     OS.botscr = 24;
 }
 
-#ifndef USE_ORIGINAL
 void setGraphicsMode(const byte mode)
 {
     if(mode == CURRENT_MODE)
@@ -298,6 +293,4 @@ void printDList(const char* name)
             break;
     }
 }
-#endif
-
 #endif

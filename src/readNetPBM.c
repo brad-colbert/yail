@@ -21,7 +21,6 @@
 
 // Globals
 byte IMAGE_FILE_TYPE = 0;
-//extern GfxDef gfxState;
 extern byte buff[];
 extern byte framebuffer[];      // defined in graphics.c
 
@@ -88,11 +87,7 @@ unsigned readComment(int fd)
     {
         READ_BYTE(fd, b)
         if(b == ASC_LF)
-        {
-            //printf("\n");
             break;
-        }
-        //printf("%02x ", (char)b);
     }
 
     return 0;
@@ -123,27 +118,6 @@ int readHeader(int fd)
 // Assumes destination will be Gfx8 formatted
 void readPBM(int fd)
 {
-    #if 0
-    unsigned numbytes = 0;
-    unsigned numread = 0;
-    byte i = 0;
-
-    readHeader(fd);
-
-    numbytes = (w / 8) * h;
-
-    // Read only the amount that will fit into memory.  Use the
-    // buffer as the guide
-    while(gfxState.buffer.segs[i].size > 0)
-    {
-        size_t size = (gfxState.buffer.segs[i].size / gfxState.buffer.segs[i].block_size) * gfxState.buffer.segs[i].block_size;
-        numread = read(fd, gfxState.buffer.segs[i].addr, size);
-        if(numread < size)
-            break;
-
-        ++i;
-    }
-    #else
     const ushort bytes_per_line = 40;
     const ushort lines = 220;
     ushort buffer_start;
@@ -177,15 +151,13 @@ void readPBM(int fd)
         buffer_start = buffer_start + block_size;
         ttl_buff_size = ttl_buff_size - read_size;
     }
-
-    #endif
 }
 
 // Reads a file from fb and writes numbytes of it into dmem.
 // Assumes destination will be Gfx9 formatted
 void readPGM(int fd)
 {
-    #if 0
+    #if OLD_CODE
     unsigned numbytes = 0;
     unsigned count = 0;
     byte segcount = 0;

@@ -41,10 +41,6 @@
 #define DISPLAYLIST_SIZE 256
 #define DISPLAYLIST_BLOCK_SIZE 0x1000
 
-//
-//#define CONSOLE_MEM 0xBC40  // We should read this from the system before we switch
-
-#ifndef USE_ORIGINAL
 // A simple structure for defining a display list in a code compact way
 typedef struct _DLModeDef
 {
@@ -65,14 +61,6 @@ typedef struct _DLDef
     DLModeDef modes[MAX_MODE_DEFS]; // compact definition of the display list
 } DLDef;
 
-#if 0
-typedef struct _GfxDef
-{
-    byte mode;
-    DLDef dl; 
-} GfxDef;
-#endif
-
 typedef struct image_header
 {
     unsigned char v1;
@@ -92,61 +80,10 @@ typedef struct image_data
 
 void saveCurrentGraphicsState(void);
 void restoreGraphicsState(void);
-
 void makeDisplayList(byte mode);
 void setGraphicsMode(const byte mode);
-#ifdef DEBUG_GRAPHICS
-void printDList(const char* name);
-#endif
-
 void clearFrameBuffer(void);
-
 void show_console(void);
 void hide_console(void);
-
-#else
-
-// A simple structure for defining a display list in a code compact way
-typedef struct _DLModeDef
-{
-    byte blank_lines;
-    byte mode;        // From the Antic modes
-    byte lines;       // # of lines of the mode
-    byte dli;         // Switch for DLI
-    void* buffer;     // Address of screen memory for mode, 0x0000 if use SAVMSC + offset
-} DLModeDef;
-
-typedef DLModeDef** DLModeDefParray;
-
-#define MAX_MODE_DEFS 8
-typedef struct _DLDef
-{
-    void* address;         // location of the DL
-    size_t size;           // size in memory of the display list
-    DLModeDef modes[MAX_MODE_DEFS]; // compact definition of the display list
-} DLDef;
-
-typedef struct _GfxDef
-{
-    byte mode;
-    MemSegs buffer;
-    DLDef dl; 
-} GfxDef;
-
-void saveCurrentGraphicsState(void);
-void restoreGraphicsState(void);
-
-void makeDisplayList(byte mode, const MemSegs* buffInfo, DLDef* dlInfo);
-void makeGraphicsDef(byte mode, GfxDef* gfxInfo);
-
-void setGraphicsMode(const byte mode);
-
-void clearFrameBuffer(void);
-
-void show_console(void);
-void hide_console(void);
-
-void printDList(const char* name, DLDef* dlInfo);
-#endif
 
 #endif // GRAPHICS_H
