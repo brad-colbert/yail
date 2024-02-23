@@ -24,10 +24,14 @@ Commands:
 Tested on and works with the Atari 800XL.  Other models, **YMMV**
 
 ## Command line ##
-Usage: yail [OPTIONS]
+Usage: YAIL.XEX [OPTIONS]
+
   -h this message
+  
   -l <filename> load image file
+  
   -u <url> use this server address
+  
   -s <tokens> search terms
 
 ## Server ##
