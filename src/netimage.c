@@ -12,7 +12,6 @@
 
 //
 extern byte buff[];
-extern byte framebuffer[];      // defined in graphics.c
 extern ImageData image;
 
 void stream_image(char* url, char* args[])
@@ -87,7 +86,7 @@ void stream_image(char* url, char* args[])
         }
         else
         {
-            buffer_start = framebuffer;
+            buffer_start = image.data;
             block_size = DISPLAYLIST_BLOCK_SIZE;
             lines_per_block = (ushort)(block_size/bytes_per_line);
             dl_block_size = lines_per_block * bytes_per_line;
