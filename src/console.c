@@ -18,21 +18,24 @@
 // Externs
 extern bool done;
 extern byte IMAGE_FILE_TYPE;
+extern void* ORG_SDLIST;
+extern void graphics_8_console_dl[];
+extern void graphics_9_console_dl[];
 
 // Globals
-byte console_lines = CONSOLE_LINES;
-extern bool console_state;
+bool console_state = false;
+
 #ifdef CONSOLE_USE_LOCAL_BUFFER
-char console_buff[GFX_0_MEM_LINE * CONSOLE_LINES];
+char CONSOLE_BUFF[GFX_0_MEM_LINE * CONSOLE_LINES];
 #else
-byte* console_buff = (byte*)0x2040;
+#define CONSOLE_BUFF ((byte*)((ushort*)ORG_SDLIST)[2])
 #endif
 char* tokens[] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 tokens
 char server[80] = { "N:TCP://192.168.1.205:9999/\"\0" };
 
 void reset_console(void)
 {
-    memset(console_buff, 0, GFX_0_MEM_LINE * 24);//console_lines); // wipe all of the console mem
+    memset(CONSOLE_BUFF, 0, GFX_0_MEM_LINE * CONSOLE_LINES);//console_lines); // wipe all of the console mem
     gotoxy(0,0);                   // start at the begining of the input line
 }
 
@@ -224,6 +227,10 @@ void start_console(char first_char)
 {
     byte x = 0;
 
+    // Fix addresses for graphics display lists for the console buffer
+    ((ushort*)graphics_8_console_dl)[95] = (ushort)CONSOLE_BUFF;
+    ((ushort*)graphics_9_console_dl)[95] = (ushort)CONSOLE_BUFF;
+
     reset_console();
 
     cursor(1);
@@ -253,11 +260,11 @@ void start_console(char first_char)
                 byte buff[80];  // two lines of data
                 byte ntokens = 0;
 
-                memcpy(buff, console_buff, WORKING_BUFF_SIZE);
+                memcpy(buff, CONSOLE_BUFF, WORKING_BUFF_SIZE);
 
                 #ifdef DEBUG_CONSOLE
                 gotoxy(0,1);
-                cprintf("%s\n\r", console_buff);
+                cprintf("%s\n\r", CONSOLE_BUFF);
                 cprintf("%s", buff);
                 cgetc();
                 #endif
@@ -312,7 +319,7 @@ void start_console(char first_char)
             case CH_DEL:
                 if(x > 0)
                 {
-                    console_buff[x-1] = 0x0;
+                    CONSOLE_BUFF[x-1] = 0x0;
                     gotox(x-1);
                 }
             break;

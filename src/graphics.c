@@ -204,10 +204,8 @@ void show_console()
 
             makeDisplayList(CURRENT_MODE);
 
-            //OS.sdlst = gfxState.dl.address;
             OS.sdlst = dlDef.address;
             ANTIC.nmien = 0x40;
-
             OS.botscr = 5;
         }
         break;
@@ -219,11 +217,9 @@ void show_console()
 
             makeDisplayList(CURRENT_MODE);
 
-            //OS.sdlst = gfxState.dl.address;
             OS.sdlst = dlDef.address;
             OS.vdslst = disable_9_dli;
             ANTIC.nmien = 0x80 | 0x40;
-
             OS.botscr = 5;
         }
     }
