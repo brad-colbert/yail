@@ -27,9 +27,18 @@ print('Listening on {}:{}'.format(bind_ip, bind_port))
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
+def printJson(objs):
+    for obj in objs:
+        print("Width {0}, Height {1}".format(obj["width"], obj["height"]))
+        print("Thumbnail {0}".format(obj["thumbnail"]))
+        print("Url {0}".format(obj["url"]))
+        print("Title {0}".format(obj["title"].encode('utf-8')))
+        print("Image {0}".format(obj["image"]))
+        print("__________")
+
+# This uses the DuckDuckGo search engine to find images.  This is handled by the duckduckgo_search package.
 def search_images(term, max_images=1000):
     print(f"Searching for '{term}'")
-    #return L(ddg_images(term, max_results=max_images)).itemgot('image')
     with DDGS() as ddgs:
         results = L([r for r in ddgs.images(term, max_results=max_images)])
 
@@ -44,112 +53,7 @@ def search_images(term, max_images=1000):
 
         return urls
 
-def search(keywords, max_results=1000): #None):
-    url = 'https://duckduckgo.com/'
-    params = {
-    	'q': keywords
-    }
-
-    logger.debug("Hitting DuckDuckGo for Token")
-
-    #   First make a request to above URL, and parse out the 'vqd'
-    #   This is a special token, which should be used in the subsequent request
-    res = requests.post(url, data=params)
-    searchObj = re.search(r'vqd=([\d-]+)\&', res.text, re.M|re.I)
-
-    if not searchObj:
-        logger.error("Token Parsing Failed !")
-        return -1
-
-    logger.debug("Obtained Token")
-
-    headers = {
-        'authority': 'duckduckgo.com',
-        'accept': 'application/json, text/javascript, */*; q=0.01',
-        'sec-fetch-dest': 'empty',
-        'x-requested-with': 'XMLHttpRequest',
-        'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.163 Safari/537.36',
-        'sec-fetch-site': 'same-origin',
-        'sec-fetch-mode': 'cors',
-        'referer': 'https://duckduckgo.com/',
-        'accept-language': 'en-US,en;q=0.9',
-    }
-
-    params = (
-        ('l', 'us-en'),
-        ('o', 'json'),
-        ('q', keywords),
-        ('vqd', searchObj.group(1)),
-        ('f', ',,,'),
-        ('p', '1'),
-        ('v7exp', 'a'),
-    )
-
-    requestUrl = url + "i.js"
-
-    logger.debug("Hitting Url : %s", requestUrl)
-
-    '''
-    while True:
-        while True:
-            try:
-                res = requests.get(requestUrl, headers=headers, params=params)
-                data = json.loads(res.text)
-                break
-            except ValueError as e:
-                logger.debug("Hitting Url Failure - Sleep and Retry: %s", requestUrl)
-                time.sleep(5)
-                continue
-
-        logger.debug("Hitting Url Success : %s", requestUrl)
-        printJson(data["results"])
-
-        for entry in data["results"]:
-            saveImage(entry["image"], "./images/")
-
-        if "next" not in data:
-            logger.debug("No Next Page - Exiting")
-            exit(0)
-
-        requestUrl = url + data["next"]
-    '''
-    results = []
-    while len(results) < max_results:
-        while True:
-            try:
-                res = requests.get(requestUrl, headers=headers, params=params)
-                data = json.loads(res.text)
-                break
-            except ValueError as e:
-                logger.debug("Hitting Url Failure - Sleep and Retry: %s %s", requestUrl, str(e))
-                time.sleep(5)
-                continue
-
-        logger.debug("Hitting Url Success : %s", requestUrl)
-        printJson(data["results"])
-
-        for entry in data["results"]:
-            results.append(entry["image"])
-
-        if "next" not in data:
-            logger.debug("No Next Page - Exiting")
-            return results
-
-        requestUrl = url + data["next"]
-
-    return 
-
-
-
-def printJson(objs):
-    for obj in objs:
-        print("Width {0}, Height {1}".format(obj["width"], obj["height"]))
-        print("Thumbnail {0}".format(obj["thumbnail"]))
-        print("Url {0}".format(obj["url"]))
-        print("Title {0}".format(obj["title"].encode('utf-8')))
-        print("Image {0}".format(obj["image"]))
-        print("__________")
-
+# This funcion is used to create a 8.3 filename for the YAI file.  It uses the hash of the file to create a unique name.
 def hash_string(s):
     import hashlib
     import binascii
@@ -190,40 +94,21 @@ def convertToYai(image):
 
     gray_dither = gray.convert(dither=Image.FLOYDSTEINBERG, colors=16)
 
-    #gray_dither.resize((640,440), Image.NEAREST).show()
-
     im_matrix = np.array(gray_dither)
 
     im_values = im_matrix[:,:,0]
-    # print(im_values.shape)
-    # print(im_values)
-    # print("\n")
 
     evens = im_values[:,::2]
-    # print(evens)
-    # print("\n")
 
     odds = im_values[:,1::2]
-    # print(odds)
-    # print("\n")
 
-    evens_scaled = (evens >> 4) << 4 # np.zeros((220,40))
-    # print(evens_scaled)
-    # print("\n")
+    # Each byte holds 2 pixels.  The upper four bits for the left pixel and the lower four bits for the right pixel.
+    evens_scaled = (evens >> 4) << 4 # left pixel
+    odds_scaled =  (odds >> 4)       # right pixel
 
-    odds_scaled =  (odds >> 4)
-    # print(odds_scaled)
-    # print("\n")
-
+    # Combine the two 4bit values into a single byte
     combined = evens_scaled + odds_scaled
-    # print(combined)
-    # print("\n")
-
     combined_int = combined.astype('int8')
-    # print(combined_int.shape)
-    # print(combined_int.shape[0])
-    # print(combined_int)
-    # print("\n")
 
     ttlbytes = combined_int.shape[0] * combined_int.shape[1]
 
@@ -314,8 +199,7 @@ def saveImage(url, pathname):
     except Exception as e:
         print('Exception:', e)
 
-
-def streamYai(url, client):
+def stream_YAI(url, client):
     from io import BytesIO
     from PIL import Image
 
@@ -394,7 +278,7 @@ def handle_client_connection(client_socket):
                 print(urls)
                 url_idx = random.randint(0, len(urls)-1)
                 url = urls[url_idx]
-                while not streamYai(url, client_socket):
+                while not stream_YAI(url, client_socket):
                     print('Problem with image trying another...')
                     url_idx = random.randint(0, len(urls)-1)
                     url = urls[url_idx]
@@ -403,7 +287,7 @@ def handle_client_connection(client_socket):
             elif tokens[0] == 'next':
                 url_idx = random.randint(0, len(urls)-1)
                 url = urls[url_idx]
-                while not streamYai(url, client_socket):
+                while not stream_YAI(url, client_socket):
                     print('Problem with image trying another...')
                     url_idx = random.randint(0, len(urls)-1)
                     url = urls[url_idx]
@@ -419,7 +303,6 @@ def handle_client_connection(client_socket):
     client_socket.close()
 
 def main():
-    # search("piper comanche p-24")
     while True:
         client_sock, address = server.accept()
         print('Accepted connection from {}:{}'.format(address[0], address[1]))

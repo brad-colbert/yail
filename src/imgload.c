@@ -13,13 +13,11 @@
 #include <stdbool.h>
 
 // Externs
-extern byte framebuffer[];
 extern char server[];
 
 //
 char buff[256]; // A block of memory to be used by all.
 bool done = false;
-bool console_state = false;
 
 void help()
 {

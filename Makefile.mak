@@ -4,9 +4,10 @@ CA65=$(CC65_HOME)\\ca65.exe
 CL65=$(CC65_HOME)\\cl65.exe
 
 PRODUCT=YAIL
-TARGET=atarixl
+TARGET=atari
 SRC_DIR=src
 CFLAGS=-Or
+# -D__SYSTEM_CHECK__=1
 
 .SUFFIXES:
 .SUFFIXES: .c .s .o
@@ -22,7 +23,7 @@ s_files: $(SRC_DIR)\*.s
     @$(MAKE) -nologo /f Makefile.mak $(**:.s=.o)
 
 link_files: $(SRC_DIR)\*.o
-    $(CL65) -t $(TARGET) $(CFLAGS) -D__SYSTEM_CHECK__=1 -o $(PRODUCT).XEX --config $(SRC_DIR)\$(PRODUCT).$(TARGET)-xex.cfg --mapfile $(PRODUCT).map -Ln $(PRODUCT).lbl $(**) $(TARGET).lib
+    $(CL65) -t $(TARGET) $(CFLAGS) -o $(PRODUCT).XEX --config $(SRC_DIR)\$(PRODUCT).$(TARGET)-xex.cfg --mapfile $(PRODUCT).map -Ln $(PRODUCT).lbl $(**) $(TARGET).lib
 
 .s.o:
   $(CA65) -t $(TARGET) $<
