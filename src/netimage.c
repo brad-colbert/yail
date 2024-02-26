@@ -124,7 +124,7 @@ void stream_image(char* url, char* args[])
 
             // Wait for keypress
             i = 0;
-            while(i++ < 30000)
+            while(i++ < 30000)   // roughly 5 seconds
                 if(kbhit())
                     break;
 
@@ -135,6 +135,8 @@ void stream_image(char* url, char* args[])
                 break;
             }
         }
+
+        OS.atract = 0x00;   // disable attract mode
     }
 
     if(FN_ERR_OK != network_write(url, "quit", 4))
