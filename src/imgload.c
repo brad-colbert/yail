@@ -71,6 +71,10 @@ int main(int argc, char* argv[])
         setGraphicsMode(GRAPHICS_8);
         clearFrameBuffer();
 
+        // Show console on startup
+        show_console();
+        start_console(0x00);
+
         while(!done)
         {
             if(kbhit())
@@ -78,6 +82,8 @@ int main(int argc, char* argv[])
                 char ch = cgetc();
                 if(ch == CH_ESC)
                     break;
+                if(ch == CH_ENTER)
+                    ch = 0x00;
                 
                 show_console();
                 start_console(ch);
