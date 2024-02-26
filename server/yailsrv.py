@@ -14,6 +14,11 @@ import random
 from duckduckgo_search import DDGS
 from fastcore.all import *
 from pprint import pprint
+from PIL import Image
+import numpy as np
+
+GRAPHICS_8 = 2
+GRAPHICS_9 = 4
 
 bind_ip = '0.0.0.0'
 bind_port = 9999
@@ -68,9 +73,13 @@ def hash_string(s):
 
     return binascii.hexlify(output.to_bytes(2, byteorder='big')).decode("ascii")
 
-def convertToYai(image):
-    from PIL import Image
-    import numpy as np
+def convert_BW_image_to_bits(image):
+    bits = np.array(image)
+    packed_bits = np.packbits(bits, axis=1)
+
+    return packed_bits
+
+def convertToYai(image, gfx_mode):
     import struct
     show_image = False
 
@@ -91,51 +100,60 @@ def convertToYai(image):
         gray = background
         print(f'Taller than 4:3  :  {gray.size[0]}->{new_width}')
 
-    gray = gray.resize((80,220), Image.LANCZOS)
+    if gfx_mode == GRAPHICS_8:
+        bw_dither = gray.resize((320,220)).convert('1')
+        data = convert_BW_image_to_bits(bw_dither)
 
-    gray_dither = gray.convert(dither=Image.FLOYDSTEINBERG, colors=16)
+    else:
+        gray = gray.resize((80,220), Image.LANCZOS)
 
-    im_matrix = np.array(gray_dither)
+        gray_dither = gray.convert(dither=Image.FLOYDSTEINBERG, colors=16)
 
-    im_values = im_matrix[:,:]
+        im_matrix = np.array(gray_dither)
 
-    evens = im_values[:,::2]
+        im_values = im_matrix[:,:]
 
-    odds = im_values[:,1::2]
+        evens = im_values[:,::2]
 
-    # Each byte holds 2 pixels.  The upper four bits for the left pixel and the lower four bits for the right pixel.
-    evens_scaled = (evens >> 4) << 4 # left pixel
-    odds_scaled =  (odds >> 4)       # right pixel
+        odds = im_values[:,1::2]
 
-    # Combine the two 4bit values into a single byte
-    combined = evens_scaled + odds_scaled
-    combined_int = combined.astype('int8')
+        # Each byte holds 2 pixels.  The upper four bits for the left pixel and the lower four bits for the right pixel.
+        evens_scaled = (evens >> 4) << 4 # left pixel
+        odds_scaled =  (odds >> 4)       # right pixel
 
-    ttlbytes = combined_int.shape[0] * combined_int.shape[1]
+        # Combine the two 4bit values into a single byte
+        combined = evens_scaled + odds_scaled
+        data = combined.astype('int8')
+
+    ttlbytes = data.shape[0] * data.shape[1]
 
     image_yai = bytearray()
     image_yai += bytes([1, 1, 0])            # version
-    image_yai += bytes([4])                  # Gfx mode (8,9)
+    image_yai += bytes([gfx_mode])         # Gfx mode (8,9)
     image_yai += bytes([3])                  # Memory block type
     image_yai += struct.pack("<H", ttlbytes) # num bytes height x width
-    image_yai += bytearray(combined_int)     # image
+    image_yai += bytearray(data)     # image
 
     if show_image:
         try:
             image.show()
-            pil_image_yai = Image.fromarray(combined_int, mode='L')
-            pil_image_yai.resize((320,220), resample=None).show()
+            if gfx_mode == GRAPHICS_8:
+                bw_dither.show()
+            else:
+                pil_image_yai = Image.fromarray(data, mode='L')
+                pil_image_yai.resize((320,220), resample=None).show()
+
         except Exception as e:
             print('Exception:', e)
 
-    print('Size: %d x %d = %d (%d)' % (combined_int.shape[0], combined_int.shape[1], ttlbytes, len(image_yai)))
+    print('Size: %d x %d = %d (%d)' % (data.shape[0], data.shape[1], ttlbytes, len(image_yai)))
     
     # Print first 10 bytes of combined_int as hex
-    res = ' '.join(format(x, '02x') for x in bytearray(combined_int)[0:10])
+    res = ' '.join(format(x, '02x') for x in bytearray(data)[0:10])
     print(str(res))
 
     # Print last 10 bytes of combined_int as hex
-    res = ' '.join(format(x, '02x') for x in bytearray(combined_int)[-10:])
+    res = ' '.join(format(x, '02x') for x in bytearray(data)[-10:])
     print(str(res))
 
     return image_yai
@@ -205,7 +223,7 @@ def saveImage(url, pathname):
     except Exception as e:
         print('Exception:', e)
 
-def stream_YAI(url, client):
+def stream_YAI(url, client, gfx_mode):
     from io import BytesIO
     from PIL import Image
 
@@ -251,7 +269,7 @@ def stream_YAI(url, client):
         #image.show()
         #input("Press Enter to continue...")
 
-        image_yai = convertToYai(image)
+        image_yai = convertToYai(image, gfx_mode)
 
         # Print image as hex
         #res = ' '.join(format(x, '02x') for x in image_yai) 
@@ -264,6 +282,7 @@ def stream_YAI(url, client):
         return False
 
 def handle_client_connection(client_socket):
+    gfx_mode = GRAPHICS_9
     try:
         done = False
         url_idx = 0
@@ -284,7 +303,7 @@ def handle_client_connection(client_socket):
                 print(urls)
                 url_idx = random.randint(0, len(urls)-1)
                 url = urls[url_idx]
-                while not stream_YAI(url, client_socket):
+                while not stream_YAI(url, client_socket, gfx_mode):
                     print('Problem with image trying another...')
                     url_idx = random.randint(0, len(urls)-1)
                     url = urls[url_idx]
@@ -293,11 +312,14 @@ def handle_client_connection(client_socket):
             elif tokens[0] == 'next':
                 url_idx = random.randint(0, len(urls)-1)
                 url = urls[url_idx]
-                while not stream_YAI(url, client_socket):
+                while not stream_YAI(url, client_socket, gfx_mode):
                     print('Problem with image trying another...')
                     url_idx = random.randint(0, len(urls)-1)
                     url = urls[url_idx]
                     time.sleep(1)
+
+            elif tokens[0] == 'gfx':
+                gfx_mode = int(tokens[1])
 
             else:
                 print('Received {}'.format(r_string.rstrip(' \r\n')))
