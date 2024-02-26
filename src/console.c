@@ -237,9 +237,6 @@ void start_console(char first_char)
     POKEW(gfx8_console_dl + 185, (ushort)console_buff);
     POKEW(gfx9_console_dl + 2, (ushort)version);
     POKEW(gfx9_console_dl + 185, (ushort)console_buff);
-    //((ushort*)graphics_8_console_dl)[1]  = (ushort)console_buff;
-
-    //((ushort*)graphics_9_console_dl)[95] = (ushort)CONSOLE_BUFF;
 
     reset_console();
 
