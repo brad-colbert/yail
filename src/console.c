@@ -9,6 +9,7 @@
 
 #include <atari.h>
 #include <conio.h>
+#include <peekpoke.h>
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -16,6 +17,7 @@
 #include <stdbool.h>
 
 // Externs
+extern char version[];
 extern bool done;
 extern byte IMAGE_FILE_TYPE;
 extern void* ORG_SDLIST;
@@ -225,11 +227,16 @@ void process_command(byte ntokens)
 
 void start_console(char first_char)
 {
+    byte* gfx8_console_dl = (byte*)graphics_8_console_dl;
+    byte* gfx9_console_dl = (byte*)graphics_9_console_dl;
+    byte* console_buff = (byte*)CONSOLE_BUFF;
     byte x = 0;
 
     // Fix addresses for graphics display lists for the console buffer
-    ((ushort*)graphics_8_console_dl)[95] = (ushort)CONSOLE_BUFF;
-    ((ushort*)graphics_9_console_dl)[95] = (ushort)CONSOLE_BUFF;
+    POKEW(gfx8_console_dl + 2, (ushort)version);
+    POKEW(gfx8_console_dl + 185, (ushort)console_buff);
+    POKEW(gfx9_console_dl + 2, (ushort)version);
+    POKEW(gfx9_console_dl + 185, (ushort)console_buff);
 
     reset_console();
 

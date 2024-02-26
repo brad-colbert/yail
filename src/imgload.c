@@ -3,6 +3,7 @@
 #include "files.h"
 #include "utility.h"
 #include "netimage.h"
+//#include "atascii.h"
 
 #include <atari.h>
 #include <conio.h>
@@ -16,6 +17,8 @@
 extern char server[];
 
 //
+//char version[] = "YAIL (Yet Another Image Loader) v1.2.2";
+const byte version[] = "\x00\x39\x21\x29\x2C\x00\x08\x39\x65\x74\x00\x21\x6E\x6F\x74\x68\x65\x72\x00\x29\x6D\x61\x67\x65\x00\x2C\x6F\x61\x64\x65\x72\x09\x00\x76\x11\x0E\x12\x0E\x13\x00";
 char buff[256]; // A block of memory to be used by all.
 bool done = false;
 
@@ -51,6 +54,7 @@ void process_command_line(int argc, char* argv[])
 //
 int main(int argc, char* argv[])
 {
+    //
     if(argc > 1)
     {
         process_command_line(argc, argv);
@@ -67,6 +71,10 @@ int main(int argc, char* argv[])
         setGraphicsMode(GRAPHICS_8);
         clearFrameBuffer();
 
+        // Show console on startup
+        show_console();
+        start_console(0x00);
+
         while(!done)
         {
             if(kbhit())
@@ -74,6 +82,8 @@ int main(int argc, char* argv[])
                 char ch = cgetc();
                 if(ch == CH_ESC)
                     break;
+                if(ch == CH_ENTER)
+                    ch = 0x00;
                 
                 show_console();
                 start_console(ch);
