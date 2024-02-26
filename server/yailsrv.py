@@ -72,20 +72,21 @@ def convertToYai(image):
     from PIL import Image
     import numpy as np
     import struct
+    show_image = False
 
-    gray = image.convert(mode='LA')
+    gray = image.convert(mode='L')
     aspect = gray.size[0]/gray.size[1]
     print("Original size:", gray.size, f'4/{4*(1/aspect)}')
 
     if aspect > 4/3:  # wider than 4:3
         new_height = int(gray.size[0] * (3/4))
-        background = Image.new("LA", (gray.size[0],new_height))
+        background = Image.new("L", (gray.size[0],new_height))
         background.paste(gray, (0, int((new_height-gray.size[1])/2)))
         gray = background
         print(f'Wider than 4:3  :  {gray.size[1]}->{new_height}')
     else:             # taller than 4:3
         new_width = int(gray.size[1] * (4/3))
-        background = Image.new("LA", (new_width, gray.size[1]))
+        background = Image.new("L", (new_width, gray.size[1]))
         background.paste(gray, (int((new_width-gray.size[0])/2), 0))
         gray = background
         print(f'Taller than 4:3  :  {gray.size[0]}->{new_width}')
@@ -96,7 +97,7 @@ def convertToYai(image):
 
     im_matrix = np.array(gray_dither)
 
-    im_values = im_matrix[:,:,0]
+    im_values = im_matrix[:,:]
 
     evens = im_values[:,::2]
 
@@ -113,14 +114,19 @@ def convertToYai(image):
     ttlbytes = combined_int.shape[0] * combined_int.shape[1]
 
     image_yai = bytearray()
-    image_yai += bytes([1, 1, 0])  # version
-    image_yai += bytes([4])        # Gfx 9
-    image_yai += bytes([3])        # MemToken
-    image_yai += struct.pack("<H", ttlbytes) #combined_int.shape[0]*combined_int.shape[1]) # num bytes height x width
-    image_yai += bytearray(combined_int)  # image
+    image_yai += bytes([1, 1, 0])            # version
+    image_yai += bytes([4])                  # Gfx mode (8,9)
+    image_yai += bytes([3])                  # Memory block type
+    image_yai += struct.pack("<H", ttlbytes) # num bytes height x width
+    image_yai += bytearray(combined_int)     # image
 
-    #pil_image_yai = Image.fromarray(combined_int, mode='L')
-    #pil_image_yai.show()
+    if show_image:
+        try:
+            image.show()
+            pil_image_yai = Image.fromarray(combined_int, mode='L')
+            pil_image_yai.resize((320,220), resample=None).show()
+        except Exception as e:
+            print('Exception:', e)
 
     print('Size: %d x %d = %d (%d)' % (combined_int.shape[0], combined_int.shape[1], ttlbytes, len(image_yai)))
     
