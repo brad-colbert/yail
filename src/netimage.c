@@ -9,10 +9,12 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdio.h>
 
 //
 extern byte buff[];
 extern ImageData image;
+extern byte CURRENT_MODE;
 
 void stream_image(char* url, char* args[])
 {
@@ -35,22 +37,6 @@ void stream_image(char* url, char* args[])
     cputs("\n\r");
     #endif
 
-    // Build up the search string
-    memset(buff, 0, 256);
-    memcpy(buff, "search \"", 8);
-    for(i = 0; i < 8; ++i)
-    {
-        if(args[i] == 0x0)
-            break;
-
-        if(i > 0)
-            strcat(buff, " ");
-        strcat(buff, args[i]);
-    }
-    strcat(buff, "\"");
-
-    i = strlen(buff);
-
     hide_console();
 
     if(FN_ERR_OK != network_init())
@@ -68,6 +54,33 @@ void stream_image(char* url, char* args[])
         network_close(url);
         return;
     }
+
+    // Send which graphics mode we are in
+    memset(buff, 0, 256);
+    sprintf(buff, "gfx %d", CURRENT_MODE &= ~GRAPHICS_CONSOLE_EN);
+    if(FN_ERR_OK != network_write(url, buff, 5))
+    {
+        show_console();
+        cprintf("Unable to write graphics mode\n\r");
+        network_close(url);
+        return;
+    }
+
+    // Build up the search string
+    memset(buff, 0, 256);
+    memcpy(buff, "search \"", 8);
+    for(i = 0; i < 8; ++i)
+    {
+        if(args[i] == 0x0)
+            break;
+
+        if(i > 0)
+            strcat(buff, " ");
+        strcat(buff, args[i]);
+    }
+    strcat(buff, "\"");
+
+    i = strlen(buff);
 
     if(FN_ERR_OK != network_write(url, buff, i))
     {
