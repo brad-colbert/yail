@@ -5,6 +5,11 @@
 
 #include "types.h"
 
+void pause(const char* message);
+void internal_to_atascii(char* buff, byte len);
+void atascii_to_internal(char* buff, byte len);
+
+#if 0
 #include <stdlib.h>
 
 typedef struct _MemSeg
@@ -32,5 +37,6 @@ void* malloc_constrianed(size_t size, size_t fence);
 size_t allocSegmentedMemory(size_t block_size, size_t num_blocks, size_t boundary, MemSegs* memsegs);
 void freeSegmentedMemory(MemSegs* memsegs);
 void printMemSegs(const MemSegs* memsegs);
+#endif
 
 #endif

@@ -20,3 +20,31 @@ void pause(const char* message)
         }
     }
 }
+
+void internal_to_atascii(char* buff, byte len)
+{
+    byte i;
+    for(i=0;i<len;++i)
+    {
+        if(buff[i])  // leave the null terminator
+            if(buff[i] < 64)
+                buff[i] += 32;
+            else if(buff[i] < 96)
+                buff[i] -= 64;
+            // otherwise leave it alone
+    }
+}
+
+void atascii_to_internal(char* buff, byte len)
+{
+    byte i;
+    for(i=0;i<len;++i)
+    {
+        if(buff[i])  // leave the null terminator
+            if(buff[i] < 32)
+                buff[i] += 64;
+            else if(buff[i] < 96)
+                buff[i] -= 32;
+            // otherwise leave it alone
+    }
+}

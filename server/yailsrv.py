@@ -4,10 +4,10 @@
 
 import requests
 import re
-import json
+#import json
 import time
 import logging
-import urllib
+#import urllib
 import os
 from tqdm import tqdm
 import socket
@@ -18,7 +18,7 @@ from fastcore.all import *
 from pprint import pprint
 from PIL import Image
 import numpy as np
-import asyncio
+#import asyncio
 
 GRAPHICS_8 = 2
 GRAPHICS_9 = 4
@@ -65,7 +65,6 @@ def search_images(term, max_images=1000):
 def hash_string(s):
     import hashlib
     import binascii
-    #hsh = bytearray(hashlib.md5(s.encode(encoding="ascii")).digest())
     hsh = bytearray(hashlib.shake_256(s.encode(encoding="ascii")).digest(2))
     assert len(hsh) == 2
     output = \
@@ -284,12 +283,11 @@ def stream_YAI(url, client, gfx_mode):
         print('Exception:', e)
         return False
 
-# new asyncio loop
-
+# For now this function is not async.  It may be in the future.
 def handle_client_connection(client_socket):
     # Set up a new event loop for this thread
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    #loop = asyncio.new_event_loop()
+    #asyncio.set_event_loop(loop)
 
     gfx_mode = GRAPHICS_9
     try:
@@ -339,7 +337,7 @@ def handle_client_connection(client_socket):
 
     finally:
         client_socket.close()
-        loop.close()  # Close the loop when done
+        #loop.close()  # Close the loop when done
 
 def main():
     while True:

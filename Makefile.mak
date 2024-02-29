@@ -7,6 +7,8 @@ PRODUCT=YAIL
 TARGET=atari
 SRC_DIR=src
 CFLAGS=-Or
+LINKFLAGS=
+#LINKFLAGS=--debug-info -Wl --dbgfile,"myapp.dbg"
 # -D__SYSTEM_CHECK__=1
 LIBRARIES=fujinet-lib/fujinet-atari-2.2.1.lib
 
@@ -24,7 +26,7 @@ s_files: $(SRC_DIR)\*.s
     @$(MAKE) -nologo /f Makefile.mak $(**:.s=.o)
 
 link_files: $(SRC_DIR)\*.o
-    $(CL65) -t $(TARGET) $(CFLAGS) -o $(PRODUCT).XEX --config $(SRC_DIR)\$(PRODUCT).$(TARGET)-xex.cfg --mapfile $(PRODUCT).map -Ln $(PRODUCT).lbl $(**) $(TARGET).lib $(LIBRARIES)
+    $(CL65) -t $(TARGET) $(CFLAGS) $(LINKFLAGS) -o $(PRODUCT).XEX --config $(SRC_DIR)\$(PRODUCT).$(TARGET)-xex.cfg --mapfile $(PRODUCT).map -Ln $(PRODUCT).lbl $(**) $(TARGET).lib $(LIBRARIES)
 
 .s.o:
   $(CA65) -t $(TARGET) $<

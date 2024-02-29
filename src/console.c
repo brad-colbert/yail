@@ -6,6 +6,7 @@
 #include "files.h"
 #include "consts.h"
 #include "types.h"
+#include "utility.h"
 
 #include <atari.h>
 #include <conio.h>
@@ -32,8 +33,8 @@ char CONSOLE_BUFF[GFX_0_MEM_LINE * CONSOLE_LINES];
 #else
 #define CONSOLE_BUFF ((byte*)((ushort*)ORG_SDLIST)[2])
 #endif
-char* tokens[] = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 tokens
-char server[80] = { "N:TCP://192.168.1.205:9999/\"\0" };
+char* tokens[8]; // = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 tokens
+char server[80] = { "N:TCP://192.168.1.126:5556/\"\0" };
 
 void reset_console(void)
 {
@@ -70,7 +71,7 @@ byte get_tokens(byte* buff, byte endx)
         }
     }
 
-    // Fix last token.  For some strange reason, the last token is ending with 0x80
+    // Fix last token.  For some strange reason, the last token is ending with 0x80 (ENTER key?)
     i = strlen(tokens[count-1]);
     tokens[count-1][i-1] = 0x0;
 
@@ -84,17 +85,6 @@ byte get_tokens(byte* buff, byte endx)
     #endif
 
     return count;
-}
-
-void fix_chars(char* buff)
-{
-    byte i;
-    for(i=0;i<MAX_LINE_LEN;++i)
-    {
-        if(buff[i])  // leave the null terminator
-            if(buff[i] <= 63)
-                buff[i] += 32;
-    }
 }
 
 void process_command(byte ntokens)
@@ -128,21 +118,21 @@ void process_command(byte ntokens)
         {
             switch(tokens[1][0])
             {
-                case 16:
+                case '0':
                     setGraphicsMode(GRAPHICS_0);
                     break;
-                case 24:
+                case '8':
                     setGraphicsMode(GRAPHICS_8);
                     break;
-                case 25:
+                case '9':
                     setGraphicsMode(GRAPHICS_9);
                     break;
-                case 17:
+                case '1':
                     switch(tokens[1][1])
-                    {   case 16:
+                    {   case '0':
                             setGraphicsMode(GRAPHICS_10);
                             break;
-                        case 17:
+                        case '1':
                             setGraphicsMode(GRAPHICS_11);
                             break;
                     }
@@ -160,7 +150,7 @@ void process_command(byte ntokens)
     {
         if(ntokens > 1)
         {
-            fix_chars(tokens[1]);
+            //internal_to_atascii(tokens[1], 40);
             load_image_file(tokens[1]);
         }
         else
@@ -196,9 +186,7 @@ void process_command(byte ntokens)
         else
         {
             if(strncmp(tokens[1], "server", 3) == 0)
-            {
                 strncpy(server, tokens[2], 79);
-            }
         }
     }
 
@@ -264,10 +252,11 @@ void start_console(char first_char)
             {
                 // process the tokens
                 #define WORKING_BUFF_SIZE 80
-                byte buff[80];  // two lines of data
+                byte buff[WORKING_BUFF_SIZE];  // two lines of data
                 byte ntokens = 0;
 
                 memcpy(buff, CONSOLE_BUFF, WORKING_BUFF_SIZE);
+                internal_to_atascii(buff, WORKING_BUFF_SIZE);
 
                 #ifdef DEBUG_CONSOLE
                 gotoxy(0,1);
@@ -312,8 +301,13 @@ void start_console(char first_char)
 
                 if(ntokens > 0)
                 {
+                    byte i;
                     reset_console();
                     process_command(ntokens);
+
+                    // Clear the tokens for the next command
+                    for(i = 0; i < 7; ++i)
+                        tokens[i] = 0x0;
                 }
 
                 reset_console();

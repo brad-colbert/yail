@@ -42,7 +42,7 @@ void stream_image(char* url, char* args[])
     if(FN_ERR_OK != network_init())
     {
         show_console();
-        cprintf("Failed to initialize network\n\r");
+        cputs("Failed to initialize network\n\r");
         network_close(url);
         return;
     }
@@ -50,18 +50,18 @@ void stream_image(char* url, char* args[])
     if(FN_ERR_OK != network_open(url, 12, 0))
     {
         show_console();
-        cprintf("Failed to open network\n\r");
+        cprintf("Failed to open %s\n\r", url);
         network_close(url);
         return;
     }
 
     // Send which graphics mode we are in
     memset(buff, 0, 256);
-    sprintf(buff, "gfx %d", CURRENT_MODE &= ~GRAPHICS_CONSOLE_EN);
-    if(FN_ERR_OK != network_write(url, buff, 5))
+    sprintf(buff, "gfx %d ", CURRENT_MODE &= ~GRAPHICS_CONSOLE_EN);
+    if(FN_ERR_OK != network_write(url, buff, 6))
     {
         show_console();
-        cprintf("Unable to write graphics mode\n\r");
+        cprintf("Unable to write graphics mode \"%s\"\n\r", buff);
         network_close(url);
         return;
     }
@@ -71,7 +71,7 @@ void stream_image(char* url, char* args[])
     memcpy(buff, "search \"", 8);
     for(i = 0; i < 8; ++i)
     {
-        if(args[i] == 0x0)
+        if(0x0 == args[i])
             break;
 
         if(i > 0)
