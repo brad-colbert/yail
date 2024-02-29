@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (C) 2021 Brad Colbert
 
 import requests
@@ -16,12 +18,13 @@ from fastcore.all import *
 from pprint import pprint
 from PIL import Image
 import numpy as np
+import asyncio
 
 GRAPHICS_8 = 2
 GRAPHICS_9 = 4
 
 bind_ip = '0.0.0.0'
-bind_port = 9999
+bind_port = 5556
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((bind_ip, bind_port))
@@ -281,7 +284,13 @@ def stream_YAI(url, client, gfx_mode):
         print('Exception:', e)
         return False
 
+# new asyncio loop
+
 def handle_client_connection(client_socket):
+    # Set up a new event loop for this thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
     gfx_mode = GRAPHICS_9
     try:
         done = False
@@ -328,7 +337,9 @@ def handle_client_connection(client_socket):
     except Exception as ex:
         logger.critical('Problem handling client ' + str(ex))
 
-    client_socket.close()
+    finally:
+        client_socket.close()
+        loop.close()  # Close the loop when done
 
 def main():
     while True:

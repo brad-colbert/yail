@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # Copyright (C) 2021 Brad Colbert
 
 import socket
@@ -6,7 +8,7 @@ import socket
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # connect the client
-client.connect(('192.168.1.125', 9999))
+client.connect(('127.0.0.1', 5556))
 client.send(b'search funny\n')
 
 IMAGE_SIZE = 8807
