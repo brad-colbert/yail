@@ -19,9 +19,6 @@ extern ImageData image;
 extern byte CURRENT_MODE;
 extern Settings settings;
 
-// globals
-//char server[80] = { "\0" };
-
 void stream_image(char* args[])
 {
     const ushort bytes_per_line = 40;

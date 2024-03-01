@@ -24,23 +24,27 @@ Settings settings;
 void help()
 {
     cputs("Usage: yail [OPTIONS]\r\n");
-    cputs("  -h this message\r\n");
-    cputs("  -l <filename> load image file\r\n");
-    cputs("  -u <url> use this server address\r\n");
-    cputs("  -s <tokens> search terms\r\n");
+          "  -h this message\r\n"
+    #ifdef YAIL_BUILD_FILE_LOADER
+          "  -l <filename> load image file\r\n"
+    #endif
+          "  -u <url> use this server address\r\n"
+          "  -s <tokens> search terms\r\n";
 }
 
-void process_command_line(int argc, char* argv[])
+void process_command_line(char* argv[])
 {
     switch(argv[1][1])
     {
         case 'h':
             help();
             break;
+        #ifdef YAIL_BUILD_FILE_LOADER
         case 'l':
             internal_to_atascii(argv[2], 40);
             load_image_file(argv[2]);
             break;
+        #endif
         case 'u':
             strcpy(settings.url, argv[2]);
             break;
@@ -59,7 +63,7 @@ int main(int argc, char* argv[])
     //
     if(argc > 1)
     {
-        process_command_line(argc, argv);
+        process_command_line(argv);
         return 0;
     }
     else

@@ -3,6 +3,8 @@
 #ifndef FILES_H
 #define FILES_H
 
+#ifdef YAIL_BUILD_FILE_LOADER
+
 #include "types.h"
 
 #define FILETYPE_PBM 0x01
@@ -48,5 +50,7 @@ typedef struct file_header
 byte imageFileType(const char filename[]);
 byte load_image_file(const char filename[]);
 void saveFile(const char filename[]);
+
+#endif // FILES_H
 
 #endif // FILES_H

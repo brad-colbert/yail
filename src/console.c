@@ -28,6 +28,7 @@ extern void* ORG_SDLIST;
 extern void graphics_8_console_dl[];
 extern void graphics_9_console_dl[];
 extern Settings settings;
+extern byte CURRENT_MODE;
 
 // Globals
 bool console_state = false;
@@ -101,11 +102,20 @@ void process_command(byte ntokens)
         "quit - Exit this utility\n\r"
         "cls  - Clear the image display\n\r"
         "gfx  - [0,8,9] Set the graphics mode\n\r"
+        "set  - Saved settings\n\r"
+        "       server [url] (ex. N:TCP://blah.duh/)\n\r"
+        #ifdef YAIL_BUILD_FILE_LOADER
         "load - [filename] Load and display file\n\r"
         "save - [filename] Save memory to YAI\n\r";
+        #else
+        "stream - [arg0...argN] Stream images\n\r";
+        #endif
+        byte SAVED_MODE = CURRENT_MODE;
 
+        setGraphicsMode(GRAPHICS_0);
         cputs(help);                              // Show the help text
         cgetc();                                  // Wait
+        setGraphicsMode(SAVED_MODE);              // Restore the graphics mode
     }
 
     if(strncmp(tokens[0], "quit", 4) == 0)
@@ -151,6 +161,7 @@ void process_command(byte ntokens)
 
     if(strncmp(tokens[0], "load", 4) == 0)
     {
+        #ifdef YAIL_BUILD_FILE_LOADER
         if(ntokens > 1)
         {
             //internal_to_atascii(tokens[1], 40);
@@ -163,10 +174,17 @@ void process_command(byte ntokens)
             cputs("ERROR: File not specified");
             cgetc();
         }
+        #else
+            gotoxy(0,0);
+            clrscr();
+            cputs("ERROR: File loading not supported");
+            cgetc();
+        #endif
     }
 
     if(strncmp(tokens[0], "save", 4) == 0)
     {
+        #ifdef YAIL_BUILD_FILE_LOADER
         if(ntokens > 1)
             saveFile(tokens[1]);
 
@@ -176,6 +194,12 @@ void process_command(byte ntokens)
             cprintf("ERROR: File not specified");
             cgetc();
         }
+        #else
+            gotoxy(0,0);
+            clrscr();
+            cputs("ERROR: File saving not supported");
+            cgetc();
+        #endif
     }
 
     if(strncmp(tokens[0], "set", 3) == 0)
@@ -263,7 +287,7 @@ void start_console(char first_char)
                 byte ntokens = 0;
 
                 memcpy(buff, CONSOLE_BUFF, WORKING_BUFF_SIZE);
-                internal_to_atascii(buff, WORKING_BUFF_SIZE);
+                internal_to_atascii((char*)buff, WORKING_BUFF_SIZE);
 
                 #ifdef DEBUG_CONSOLE
                 gotoxy(0,1);
