@@ -103,7 +103,7 @@ void process_command(byte ntokens)
         "cls  - Clear the image display\n\r"
         "gfx  - [0,8,9] Set the graphics mode\n\r"
         "set  - Saved settings\n\r"
-        "       server [url] (ex. N:TCP://blah.duh/)\n\r"
+        "       server [url] (N:TCP://blah.duh/)\n\r"
         #ifdef YAIL_BUILD_FILE_LOADER
         "load - [filename] Load and display file\n\r"
         "save - [filename] Save memory to YAI\n\r";

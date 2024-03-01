@@ -5,6 +5,8 @@
 #include "netimage.h"
 #include "app_key.h"
 #include "settings.h"
+#include "version.h"
+#include "utility.h"
 
 #include <atari.h>
 #include <conio.h>
@@ -15,8 +17,8 @@
 #include <stdbool.h>
 
 //
-//char version[] = "YAIL (Yet Another Image Loader) v1.2.2";
-const byte version[] = "\x00\x39\x21\x29\x2C\x00\x08\x39\x65\x74\x00\x21\x6E\x6F\x74\x68\x65\x72\x00\x29\x6D\x61\x67\x65\x00\x2C\x6F\x61\x64\x65\x72\x09\x00\x76\x11\x0E\x12\x0E\x18\x00";
+char version[] = "YAIL (Yet Another Image Loader) v" TOSTR(MAJOR_VERSION) "." TOSTR(MINOR_VERSION) "." TOSTR(BUILD_VERSION);
+
 char buff[256]; // A block of memory to be used by all.
 bool done = false;
 Settings settings;
@@ -57,6 +59,9 @@ void process_command_line(char* argv[])
 //
 int main(int argc, char* argv[])
 {
+    // Convert the version string to internal code format
+    atascii_to_internal(version, 40);
+
     // Initialize the settings
     get_settings();
 
