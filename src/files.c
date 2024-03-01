@@ -1,3 +1,4 @@
+#ifdef YAIL_BUILD_FILE_LOADER
 // Copyright (C) 2021 Brad Colbert
 #include "files.h"
 #include "console.h"
@@ -233,3 +234,4 @@ byte load_image_file(const char filename[])
 
     return 0;
 }
+#endif

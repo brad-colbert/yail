@@ -5,6 +5,8 @@
 #include "netimage.h"
 #include "app_key.h"
 #include "settings.h"
+#include "version.h"
+#include "utility.h"
 
 #include <atari.h>
 #include <conio.h>
@@ -15,8 +17,8 @@
 #include <stdbool.h>
 
 //
-//char version[] = "YAIL (Yet Another Image Loader) v1.2.2";
-const byte version[] = "\x00\x39\x21\x29\x2C\x00\x08\x39\x65\x74\x00\x21\x6E\x6F\x74\x68\x65\x72\x00\x29\x6D\x61\x67\x65\x00\x2C\x6F\x61\x64\x65\x72\x09\x00\x76\x11\x0E\x12\x0E\x18\x00";
+char version[] = "YAIL (Yet Another Image Loader) v" TOSTR(MAJOR_VERSION) "." TOSTR(MINOR_VERSION) "." TOSTR(BUILD_VERSION);
+
 char buff[256]; // A block of memory to be used by all.
 bool done = false;
 Settings settings;
@@ -24,23 +26,27 @@ Settings settings;
 void help()
 {
     cputs("Usage: yail [OPTIONS]\r\n");
-    cputs("  -h this message\r\n");
-    cputs("  -l <filename> load image file\r\n");
-    cputs("  -u <url> use this server address\r\n");
-    cputs("  -s <tokens> search terms\r\n");
+          "  -h this message\r\n"
+    #ifdef YAIL_BUILD_FILE_LOADER
+          "  -l <filename> load image file\r\n"
+    #endif
+          "  -u <url> use this server address\r\n"
+          "  -s <tokens> search terms\r\n";
 }
 
-void process_command_line(int argc, char* argv[])
+void process_command_line(char* argv[])
 {
     switch(argv[1][1])
     {
         case 'h':
             help();
             break;
+        #ifdef YAIL_BUILD_FILE_LOADER
         case 'l':
             internal_to_atascii(argv[2], 40);
             load_image_file(argv[2]);
             break;
+        #endif
         case 'u':
             strcpy(settings.url, argv[2]);
             break;
@@ -53,13 +59,16 @@ void process_command_line(int argc, char* argv[])
 //
 int main(int argc, char* argv[])
 {
+    // Convert the version string to internal code format
+    atascii_to_internal(version, 40);
+
     // Initialize the settings
     get_settings();
 
     //
     if(argc > 1)
     {
-        process_command_line(argc, argv);
+        process_command_line(argv);
         return 0;
     }
     else

@@ -1,5 +1,5 @@
 // Copyright (C) 2021 Brad Colbert
-
+#ifdef YAIL_BUILD_FILE_LOADER
 #define USE_ORIGINAL
 #ifndef USE_ORIGINAL
 #else
@@ -129,7 +129,7 @@ void readPBM(int fd)
     
     readHeader(fd);
 
-    buffer_start = framebuffer;
+    buffer_start = (ushort)framebuffer;
     block_size = DISPLAYLIST_BLOCK_SIZE;
     lines_per_block = (ushort)(block_size/bytes_per_line);
     dl_block_size = lines_per_block * bytes_per_line;
@@ -141,7 +141,7 @@ void readPBM(int fd)
         if(read_size > ttl_buff_size)
             read_size = ttl_buff_size;
 
-        if(read(fd, buffer_start, read_size) < 0)
+        if(read((void*)fd, buffer_start, read_size) < 0)
         {
             show_console();
             cprintf("Error reading\n\r");
@@ -267,4 +267,6 @@ void readPGM(int fd)
 
     #endif
 }
+#endif // YAIL_BUILD_FILE_LOADER
+
 #endif
