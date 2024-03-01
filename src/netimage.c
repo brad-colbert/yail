@@ -2,7 +2,9 @@
 #include "fujinet-network.h"
 #include "graphics.h"
 #include "netimage.h"
+#include "settings.h"
 #include "types.h"
+//#include "fujinet-io.h"
 
 #include <atari.h>
 #include <conio.h>
@@ -15,8 +17,12 @@
 extern byte buff[];
 extern ImageData image;
 extern byte CURRENT_MODE;
+extern Settings settings;
 
-void stream_image(char* url, char* args[])
+// globals
+//char server[80] = { "\0" };
+
+void stream_image(char* args[])
 {
     const ushort bytes_per_line = 40;
     const ushort lines = 220;
@@ -43,26 +49,26 @@ void stream_image(char* url, char* args[])
     {
         show_console();
         cputs("Failed to initialize network\n\r");
-        network_close(url);
+        network_close(settings.url);
         return;
     }
 
-    if(FN_ERR_OK != network_open(url, 12, 0))
+    if(FN_ERR_OK != network_open(settings.url, 12, 0))
     {
         show_console();
-        cprintf("Failed to open %s\n\r", url);
-        network_close(url);
+        cprintf("Failed to open %s\n\r", settings.url);
+        network_close(settings.url);
         return;
     }
 
     // Send which graphics mode we are in
     memset(buff, 0, 256);
     sprintf(buff, "gfx %d ", CURRENT_MODE &= ~GRAPHICS_CONSOLE_EN);
-    if(FN_ERR_OK != network_write(url, buff, 6))
+    if(FN_ERR_OK != network_write(settings.url, buff, 6))
     {
         show_console();
         cprintf("Unable to write graphics mode \"%s\"\n\r", buff);
-        network_close(url);
+        network_close(settings.url);
         return;
     }
 
@@ -82,11 +88,11 @@ void stream_image(char* url, char* args[])
 
     i = strlen(buff);
 
-    if(FN_ERR_OK != network_write(url, buff, i))
+    if(FN_ERR_OK != network_write(settings.url, buff, i))
     {
         show_console();
         cprintf("Unable to write request\n\r");
-        network_close(url);
+        network_close(settings.url);
         return;
     }
 
@@ -107,11 +113,11 @@ void stream_image(char* url, char* args[])
             read_size = dl_block_size;
 
             // Read the header
-            if(FN_ERR_OK != network_read(url, (unsigned char*)&image.header, sizeof(image.header)))
+            if(FN_ERR_OK != network_read(settings.url, (unsigned char*)&image.header, sizeof(image.header)))
             {
                 show_console();
                 cprintf("Error reading\n\r");
-                network_close(url);
+                network_close(settings.url);
                 break;
             }
 
@@ -123,11 +129,11 @@ void stream_image(char* url, char* args[])
                     read_size = ttl_buff_size;
 
                 clrscr();
-                if(FN_ERR_OK != network_read(url, buffer_start, read_size))
+                if(FN_ERR_OK != network_read(settings.url, buffer_start, read_size))
                 {
                     show_console();
                     cprintf("Error reading\n\r");
-                    network_close(url);
+                    network_close(settings.url);
                     break;
                 }
 
@@ -141,7 +147,7 @@ void stream_image(char* url, char* args[])
                 if(kbhit())
                     break;
 
-            if(FN_ERR_OK != network_write(url, "next", 4))
+            if(FN_ERR_OK != network_write(settings.url, "next", 4))
             {
                 show_console();
                 cprintf("Unable to write request\n\r");
@@ -152,13 +158,13 @@ void stream_image(char* url, char* args[])
         OS.atract = 0x00;   // disable attract mode
     }
 
-    if(FN_ERR_OK != network_write(url, "quit", 4))
+    if(FN_ERR_OK != network_write(settings.url, "quit", 4))
     {
         show_console();
         cprintf("Unable to write request\n\r");
     }
 
-    network_close(url);
+    network_close(settings.url);
 
     OS.soundr = 3; // Restore SIO beeping sound
 }

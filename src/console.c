@@ -5,7 +5,10 @@
 #include "console.h"
 #include "files.h"
 #include "consts.h"
+#include "settings.h"
 #include "types.h"
+#include "app_key.h"
+#include "fujinet-io.h"
 #include "utility.h"
 
 #include <atari.h>
@@ -24,6 +27,7 @@ extern byte IMAGE_FILE_TYPE;
 extern void* ORG_SDLIST;
 extern void graphics_8_console_dl[];
 extern void graphics_9_console_dl[];
+extern Settings settings;
 
 // Globals
 bool console_state = false;
@@ -34,7 +38,6 @@ char CONSOLE_BUFF[GFX_0_MEM_LINE * CONSOLE_LINES];
 #define CONSOLE_BUFF ((byte*)((ushort*)ORG_SDLIST)[2])
 #endif
 char* tokens[8]; // = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 tokens
-char server[80] = { "N:TCP://192.168.1.126:5556/\"\0" };
 
 void reset_console(void)
 {
@@ -186,7 +189,11 @@ void process_command(byte ntokens)
         else
         {
             if(strncmp(tokens[1], "server", 3) == 0)
-                strncpy(server, tokens[2], 79);
+            {
+                //strncpy(server, tokens[2], 79);
+                strncpy(settings.url, tokens[2], MAX_APPKEY_LEN);
+                put_settings();  // save the URL on the FN
+            }
         }
     }
 
@@ -208,7 +215,7 @@ void process_command(byte ntokens)
             cputs("\n\r");
             #endif
 
-            stream_image(server, &tokens[1]);
+            stream_image(&tokens[1]);
         }
     }
 }

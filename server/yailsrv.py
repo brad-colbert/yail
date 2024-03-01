@@ -4,10 +4,8 @@
 
 import requests
 import re
-#import json
 import time
 import logging
-#import urllib
 import os
 from tqdm import tqdm
 import socket
