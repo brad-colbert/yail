@@ -9,7 +9,7 @@
  
 # Space or comma separated list of cc65 supported target platforms to build for.
 # Default: c64 (lowercase!)
-TARGETS := atarixl
+TARGETS := atari
  
 # Name of the final, single-file executable.
 # Default: name of the current dir with target name appended
@@ -19,7 +19,9 @@ PROGRAM := $(PROJECT)
 # Path(s) to additional libraries required for linking the program
 # Use only if you don't want to place copies of the libraries in SRCDIR
 # Default: none
-LIBS	:= 
+LIBS	:= fujinet-lib/fujinet-atari-2.2.1.lib
+
+INCLUDES := -Ifujinet-lib/
 
 # Custom linker configuration file
 # Use only if you don't want to place it in SRCDIR
@@ -299,7 +301,7 @@ $(TARGETOBJDIR):
 vpath %.c $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
  
 $(TARGETOBJDIR)/%.o: %.c | $(TARGETOBJDIR)
-	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(CFLAGS) -o $@ $<
+	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(INCLUDES) $(CFLAGS) -o $@ $<
  
 vpath %.s $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
  
@@ -309,12 +311,12 @@ $(TARGETOBJDIR)/%.o: %.s | $(TARGETOBJDIR)
 vpath %.asm $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
  
 $(TARGETOBJDIR)/%.o: %.asm | $(TARGETOBJDIR)
-	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
+	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(INCLUDES) $(ASFLAGS) -o $@ $<
  
 vpath %.a65 $(SRCDIR)/$(TARGETLIST) $(SRCDIR)
  
 $(TARGETOBJDIR)/%.o: %.a65 | $(TARGETOBJDIR)
-	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(ASFLAGS) -o $@ $<
+	$(CC) -t $(CC65TARGET) -c --create-dep $(@:.o=.d) $(INCLUDES) $(ASFLAGS) -o $@ $<
  
 $(PROGRAM): $(CONFIG) $(OBJECTS) $(LIBS)
 	$(CC) -t $(CC65TARGET) $(LDFLAGS) -o $@ $(patsubst %.cfg,-C %.cfg,$^)
