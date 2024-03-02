@@ -46,18 +46,14 @@ uint8_t get_settings()
     if (1 == r) // key doesn't exist. write the default.
     {
         byte keylen = strlen(DEFAULT_URL);
-        //cputs("Creating default URL key\n\r");
+
         strncpy(settings.url, DEFAULT_URL, MAX_APPKEY_LEN);
         sio_openkey(&data, 1, FN_URL_KEY_ID);
         strncpy((char *)data.write.value, settings.url, MAX_APPKEY_LEN);
-        //cprintf("Writing %s to key %d\n\r", (char*)data.write.value, FN_URL_KEY_ID);
         r = fn_io_appkey_write(keylen, &data.write);
 
         if(1 == r)
-        {
-            //cputs("Problem writing URL key\n\r");
             return r;
-        }
     }
     else
     {
@@ -74,30 +70,15 @@ uint8_t get_settings()
 
     if (1 == r) // key doesn't exist. write the default.
     {
-        //cputs("Creating default GFX key\n\r");
-        //settings.gfx_mode = DEFAULT_GFX_MODE;
         sio_openkey(&data, 1, FN_GFX_KEY_ID);
         data.write.value[0] = DEFAULT_GFX_MODE;
-        //cprintf("Writing %02X to key %d\n\r", data.write.value[0], FN_GFX_KEY_ID);
         r = fn_io_appkey_write(1, &data.write);
 
         if(1 == r)
-        {
-            //cputs("Problem writing GFX key\n\r");
             return r;
-        }
 
         setGraphicsMode(DEFAULT_GFX_MODE);   
     }
-    /*
-    else
-    {
-        cprintf("Read GFX key %d:%02x\n\r", data.read.length, ((byte*)data.read.value)[0]);
-        settings.gfx_mode = ((byte*)data.read.value)[0];
-    }
-    */
-    //cprintf("Read GFX key %d:%02x\n\r", data.read.length, ((byte*)data.read.value)[0]);
-    //cgetc();
     else
         setGraphicsMode(((byte*)data.read.value)[0]);   
 
