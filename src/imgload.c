@@ -62,9 +62,6 @@ int main(int argc, char* argv[])
     // Convert the version string to internal code format
     atascii_to_internal(version, 40);
 
-    // Initialize the settings
-    get_settings();
-
     //
     if(argc > 1)
     {
@@ -78,7 +75,11 @@ int main(int argc, char* argv[])
 
         // Initialize the frame buffer
         saveCurrentGraphicsState();
-        setGraphicsMode(GRAPHICS_8);
+        //setGraphicsMode(GRAPHICS_8);
+        //clearFrameBuffer();
+
+        // Initialize the settings.  Set defaults if no saved settings are found.
+        get_settings();
         clearFrameBuffer();
 
         // Show console on startup

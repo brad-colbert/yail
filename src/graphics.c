@@ -3,6 +3,7 @@
 #include "console.h"
 #include "files.h"
 #include "utility.h"
+#include "settings.h"
 #include "consts.h"
 #include "types.h"
 
@@ -38,6 +39,7 @@ byte framebuffer[FRAMEBUFFER_SIZE + 32];  // 32 bytes of padding
 //
 extern char* console_buff;
 extern byte console_lines;
+extern Settings settings;
 
 // Globals
 void* ORG_SDLIST = 0;
@@ -45,7 +47,7 @@ void* VDSLIST_STATE = 0;
 byte ORG_GPRIOR = 0x0;
 byte NMI_STATE = 0x0;
 byte ORG_COLOR1, ORG_COLOR2;
-byte CURRENT_MODE = 0;
+//byte CURRENT_MODE = 0;
 DLDef dlDef;
 ImageData image = { {0, 0, 0, 0, 0, 0}, framebuffer };
 
@@ -113,7 +115,7 @@ void restoreGraphicsState(void)
 
 void setGraphicsMode(const byte mode)
 {
-    if(mode == CURRENT_MODE)
+    if(mode == settings.gfx_mode)
         return;
 
     makeDisplayList(mode);
@@ -165,7 +167,7 @@ void setGraphicsMode(const byte mode)
         break;
     }
 
-    CURRENT_MODE = mode;
+    settings.gfx_mode = mode;
 }
 
 void makeDisplayList(byte mode)
@@ -194,15 +196,15 @@ void makeDisplayList(byte mode)
 
 void show_console()
 {
-    switch(CURRENT_MODE)
+    switch(settings.gfx_mode)
     {
         case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
             break;
         case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
         {
-            CURRENT_MODE |= GRAPHICS_CONSOLE_EN;
+            settings.gfx_mode |= GRAPHICS_CONSOLE_EN;
 
-            makeDisplayList(CURRENT_MODE);
+            makeDisplayList(settings.gfx_mode);
 
             OS.sdlst = dlDef.address;
             ANTIC.nmien = 0x40;
@@ -213,9 +215,9 @@ void show_console()
         case GRAPHICS_10:
         case GRAPHICS_11:
         {
-            CURRENT_MODE |= GRAPHICS_CONSOLE_EN;
+            settings.gfx_mode |= GRAPHICS_CONSOLE_EN;
 
-            makeDisplayList(CURRENT_MODE);
+            makeDisplayList(settings.gfx_mode);
 
             OS.sdlst = dlDef.address;
             OS.vdslst = disable_9_dli;
@@ -227,7 +229,7 @@ void show_console()
 
 void hide_console()
 {
-    switch(CURRENT_MODE) // ^ GRAPHICS_CONSOLE_EN)
+    switch(settings.gfx_mode) // ^ GRAPHICS_CONSOLE_EN)
     {
         case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
             break;
@@ -236,9 +238,9 @@ void hide_console()
         case GRAPHICS_10_CONSOLE:
         case GRAPHICS_11_CONSOLE:
         {
-            CURRENT_MODE &= (byte)~GRAPHICS_CONSOLE_EN;
+            settings.gfx_mode &= (byte)~GRAPHICS_CONSOLE_EN;
 
-            makeDisplayList(CURRENT_MODE);
+            makeDisplayList(settings.gfx_mode);
             //POKEW(SDLSTL, gfxState.dl.address);
 
             OS.sdlst = dlDef.address;

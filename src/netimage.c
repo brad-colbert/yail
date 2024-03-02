@@ -16,7 +16,6 @@
 //
 extern byte buff[];
 extern ImageData image;
-extern byte CURRENT_MODE;
 extern Settings settings;
 
 void stream_image(char* args[])
@@ -60,7 +59,7 @@ void stream_image(char* args[])
 
     // Send which graphics mode we are in
     memset(buff, 0, 256);
-    sprintf(buff, "gfx %d ", CURRENT_MODE &= ~GRAPHICS_CONSOLE_EN);
+    sprintf(buff, "gfx %d ", settings.gfx_mode &= ~GRAPHICS_CONSOLE_EN);
     if(FN_ERR_OK != network_write(settings.url, buff, 6))
     {
         show_console();

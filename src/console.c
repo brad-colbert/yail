@@ -28,7 +28,6 @@ extern void* ORG_SDLIST;
 extern void graphics_8_console_dl[];
 extern void graphics_9_console_dl[];
 extern Settings settings;
-extern byte CURRENT_MODE;
 
 // Globals
 bool console_state = false;
@@ -110,7 +109,7 @@ void process_command(byte ntokens)
         #else
         "stream - [arg0...argN] Stream images\n\r";
         #endif
-        byte SAVED_MODE = CURRENT_MODE;
+        byte SAVED_MODE = settings.gfx_mode;
 
         setGraphicsMode(GRAPHICS_0);
         cputs(help);                              // Show the help text
