@@ -47,7 +47,6 @@ void* VDSLIST_STATE = 0;
 byte ORG_GPRIOR = 0x0;
 byte NMI_STATE = 0x0;
 byte ORG_COLOR1, ORG_COLOR2;
-//byte CURRENT_MODE = 0;
 DLDef dlDef;
 ImageData image = { {0, 0, 0, 0, 0, 0}, framebuffer };
 
@@ -168,6 +167,8 @@ void setGraphicsMode(const byte mode)
     }
 
     settings.gfx_mode = mode;
+
+    put_settings(SETTINGS_GFX);  // save the graphics mode on the FN
 }
 
 void makeDisplayList(byte mode)

@@ -1,6 +1,5 @@
-#include "graphics.h"
 #include "settings.h"
-#include "app_key.h"
+#include "graphics.h"
 #include "utility.h"
 #include "fujinet-io.h"
 
@@ -17,8 +16,10 @@
 #define DEFAULT_URL "N:TCP://fujinet.online:5556/"
 #define DEFAULT_GFX_MODE GRAPHICS_8
 
-//
-extern Settings settings;
+// Globals
+Settings settings;
+
+// Externals
 extern byte buff[];
 
 unsigned char sio_openkey(AppKeyDataBlock* data, unsigned char open_mode, unsigned char key)
@@ -57,7 +58,6 @@ uint8_t get_settings()
     }
     else
     {
-        //cprintf("Read URL key %d:%s\n\r", data.read.length, (char*)data.read.value);
         memset(settings.url, 0, SERVER_URL_SIZE);
         strncpy(settings.url, (char*)data.read.value, data.read.length);
     }
@@ -87,42 +87,47 @@ uint8_t get_settings()
     return 0;
 }
 
-uint8_t put_settings()
+uint8_t put_settings(byte select)
 {
     AppKeyDataBlock data;
     uint8_t r;
 
-    // Get the URL settings
-    r = sio_openkey(&data, 1, FN_URL_KEY_ID);
-
-    if (1 == r) // unable to open or create the key for write
-        return r;
-
-    strncpy((char *)data.write.value, settings.url, MAX_APPKEY_LEN);
-    r = fn_io_appkey_write(sizeof(DEFAULT_URL), &data.write);
-
-    if (1 == r) // problem writting the key
-        return r;
-
-    buff[0] = (char)settings.gfx_mode;
-    buff[1] = 0x0;
-    
-    //r = write_value_to_key(FN_GFX_KEY_ID, &data, buff);
-    
-    // Get the GFX mode settings
-    r = sio_openkey(&data, 1, FN_GFX_KEY_ID);
-
-    if (1 == r) // unable to open or create the key for write
-        return r;
-
-    strncpy((char *)data.write.value, buff, 2);
-    r = fn_io_appkey_write(sizeof(DEFAULT_URL), &data.write);
-
-    if (1 == r) // problem writting the key
+    switch(select)
     {
-        cputs("Problem writing GFX key\n\r");
-        return r;
+        case SETTINGS_NONE:
+            return 0;
+        case SETTINGS_URL:
+            {
+                byte keylen = strlen(settings.url);
+
+                sio_openkey(&data, 1, FN_URL_KEY_ID);
+                strncpy((char *)data.write.value, settings.url, MAX_APPKEY_LEN);
+                r = fn_io_appkey_write(keylen, &data.write);
+
+                if(1 == r)
+                    return r;
+            }
+            break;
+        case SETTINGS_GFX:
+            {
+                // This is a cheat and means we won't be able to save text mode.
+                // We are doing this so we don't clobber the desired mode when we quit.
+                // Doesn't really belong here and should probably be handled by a flag on the
+                // setGraphicsMode function.
+                if(settings.gfx_mode > GRAPHICS_0)
+                {
+                    sio_openkey(&data, 1, FN_GFX_KEY_ID);
+                    data.write.value[0] = settings.gfx_mode & ~GRAPHICS_CONSOLE_EN;  // Don't capture the console bit
+                    r = fn_io_appkey_write(1, &data.write);
+
+                    if(1 == r)
+                        return r;
+                }
+            }
+            break;
+        default:
+            return 1;
     }
 
-    return r;
+    return 0;
 }

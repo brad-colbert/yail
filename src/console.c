@@ -7,7 +7,6 @@
 #include "consts.h"
 #include "settings.h"
 #include "types.h"
-#include "app_key.h"
 #include "fujinet-io.h"
 #include "utility.h"
 
@@ -214,8 +213,8 @@ void process_command(byte ntokens)
             if(strncmp(tokens[1], "server", 3) == 0)
             {
                 //strncpy(server, tokens[2], 79);
-                strncpy(settings.url, tokens[2], MAX_APPKEY_LEN);
-                put_settings();  // save the URL on the FN
+                strncpy(settings.url, tokens[2], SERVER_URL_SIZE);
+                put_settings(SETTINGS_URL);  // save the URL on the FN
             }
         }
     }

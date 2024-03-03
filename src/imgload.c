@@ -3,7 +3,6 @@
 #include "files.h"
 #include "utility.h"
 #include "netimage.h"
-#include "app_key.h"
 #include "settings.h"
 #include "version.h"
 #include "utility.h"
@@ -21,7 +20,7 @@ char version[] = "YAIL (Yet Another Image Loader) v" TOSTR(MAJOR_VERSION) "." TO
 
 char buff[256]; // A block of memory to be used by all.
 bool done = false;
-Settings settings;
+extern Settings settings;
 
 void help()
 {
@@ -75,8 +74,6 @@ int main(int argc, char* argv[])
 
         // Initialize the frame buffer
         saveCurrentGraphicsState();
-        //setGraphicsMode(GRAPHICS_8);
-        //clearFrameBuffer();
 
         // Initialize the settings.  Set defaults if no saved settings are found.
         get_settings();
