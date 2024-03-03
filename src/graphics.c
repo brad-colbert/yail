@@ -167,8 +167,6 @@ void setGraphicsMode(const byte mode)
     }
 
     settings.gfx_mode = mode;
-
-    put_settings(SETTINGS_GFX);  // save the graphics mode on the FN
 }
 
 void makeDisplayList(byte mode)

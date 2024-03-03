@@ -150,6 +150,10 @@ void process_command(byte ntokens)
                     break;
             }
         }
+
+        // Save the graphics mode if not in text mode
+        if(settings.gfx_mode > GRAPHICS_0)
+            put_settings(SETTINGS_GFX);  // save the graphics mode on the FN
     }
 
     if(strncmp(tokens[0], "cls", 3) == 0)
@@ -212,7 +216,6 @@ void process_command(byte ntokens)
         {
             if(strncmp(tokens[1], "server", 3) == 0)
             {
-                //strncpy(server, tokens[2], 79);
                 strncpy(settings.url, tokens[2], SERVER_URL_SIZE);
                 put_settings(SETTINGS_URL);  // save the URL on the FN
             }

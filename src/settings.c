@@ -110,19 +110,12 @@ uint8_t put_settings(byte select)
             break;
         case SETTINGS_GFX:
             {
-                // This is a cheat and means we won't be able to save text mode.
-                // We are doing this so we don't clobber the desired mode when we quit.
-                // Doesn't really belong here and should probably be handled by a flag on the
-                // setGraphicsMode function.
-                if(settings.gfx_mode > GRAPHICS_0)
-                {
-                    sio_openkey(&data, 1, FN_GFX_KEY_ID);
-                    data.write.value[0] = settings.gfx_mode & ~GRAPHICS_CONSOLE_EN;  // Don't capture the console bit
-                    r = fn_io_appkey_write(1, &data.write);
+                sio_openkey(&data, 1, FN_GFX_KEY_ID);
+                data.write.value[0] = settings.gfx_mode & ~GRAPHICS_CONSOLE_EN;  // Don't capture the console bit
+                r = fn_io_appkey_write(1, &data.write);
 
-                    if(1 == r)
-                        return r;
-                }
+                if(1 == r)
+                    return r;
             }
             break;
         default:
