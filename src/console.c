@@ -7,7 +7,6 @@
 #include "consts.h"
 #include "settings.h"
 #include "types.h"
-#include "app_key.h"
 #include "fujinet-io.h"
 #include "utility.h"
 
@@ -28,7 +27,6 @@ extern void* ORG_SDLIST;
 extern void graphics_8_console_dl[];
 extern void graphics_9_console_dl[];
 extern Settings settings;
-extern byte CURRENT_MODE;
 
 // Globals
 bool console_state = false;
@@ -110,7 +108,7 @@ void process_command(byte ntokens)
         #else
         "stream - [arg0...argN] Stream images\n\r";
         #endif
-        byte SAVED_MODE = CURRENT_MODE;
+        byte SAVED_MODE = settings.gfx_mode;
 
         setGraphicsMode(GRAPHICS_0);
         cputs(help);                              // Show the help text
@@ -152,6 +150,10 @@ void process_command(byte ntokens)
                     break;
             }
         }
+
+        // Save the graphics mode if not in text mode
+        if(settings.gfx_mode > GRAPHICS_0)
+            put_settings(SETTINGS_GFX);  // save the graphics mode on the FN
     }
 
     if(strncmp(tokens[0], "cls", 3) == 0)
@@ -214,9 +216,8 @@ void process_command(byte ntokens)
         {
             if(strncmp(tokens[1], "server", 3) == 0)
             {
-                //strncpy(server, tokens[2], 79);
-                strncpy(settings.url, tokens[2], MAX_APPKEY_LEN);
-                put_settings();  // save the URL on the FN
+                strncpy(settings.url, tokens[2], SERVER_URL_SIZE);
+                put_settings(SETTINGS_URL);  // save the URL on the FN
             }
         }
     }
