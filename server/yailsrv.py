@@ -314,6 +314,11 @@ def handle_client_connection(client_socket):
                     url = urls[url_idx]
                     time.sleep(1)
 
+            elif tokens[0] == 'showurl':
+                while not stream_YAI(tokens[1], client_socket, gfx_mode):
+                    print('Problem with image.')
+                    time.sleep(1)
+
             elif tokens[0] == 'next':
                 url_idx = random.randint(0, len(urls)-1)
                 url = urls[url_idx]
