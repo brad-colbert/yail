@@ -30,7 +30,7 @@ server.listen(5)  # max backlog of connections
 
 print('Listening on {}:{}'.format(bind_ip, bind_port))
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
 def printJson(objs):
@@ -48,14 +48,14 @@ def search_images(term, max_images=1000):
     with DDGS() as ddgs:
         results = L([r for r in ddgs.images(term, max_results=max_images)])
 
-        for result in results:
-            pprint(result)
+        #for result in results:
+        #    pprint(result)
 
         urls = []
         for result in results:
             urls.append(result['image'])
 
-        pprint(urls)
+        #pprint(urls)
 
         return urls
 
@@ -148,6 +148,7 @@ def convertToYai(image, gfx_mode):
 
     print('Size: %d x %d = %d (%d)' % (data.shape[0], data.shape[1], ttlbytes, len(image_yai)))
     
+    ''' Kind of a an early debug check to print the first and last 10 bytes of the image as hex.  This is useful to see if the image is being created correctly.
     # Print first 10 bytes of combined_int as hex
     res = ' '.join(format(x, '02x') for x in bytearray(data)[0:10])
     print(str(res))
@@ -155,6 +156,7 @@ def convertToYai(image, gfx_mode):
     # Print last 10 bytes of combined_int as hex
     res = ' '.join(format(x, '02x') for x in bytearray(data)[-10:])
     print(str(res))
+    '''
 
     return image_yai
 
@@ -232,10 +234,14 @@ def stream_YAI(url, client, gfx_mode):
     """
     # download the body of response by chunk, not immediately
     try:
+        print('Loading', url, url.encode())
+
         response = requests.get(url, stream=True)
         
         # get the total file size
         file_size = int(response.headers.get("Content-Length", 0))
+        if file_size > 0:
+            print(f'File size: {file_size}')
 
         # get the file name
         exts = ['.jpg', '.jpeg', '.gif', '.png']
@@ -271,14 +277,12 @@ def stream_YAI(url, client, gfx_mode):
 
         image_yai = convertToYai(image, gfx_mode)
 
-        # Print image as hex
-        #res = ' '.join(format(x, '02x') for x in image_yai) 
-        #print(str(res))
         client.sendall(image_yai)
+
         return True
 
     except Exception as e:
-        print('Exception:', e)
+        print(f'Exception: {e} **{file_size}')
         return False
 
 # For now this function is not async.  It may be in the future.
@@ -305,18 +309,27 @@ def handle_client_connection(client_socket):
                 for t in tokens:
                     print('*', t)
                 urls = search_images(' '.join(tokens[1:]))
-                print(urls)
+                #print(urls)
                 url_idx = random.randint(0, len(urls)-1)
                 url = urls[url_idx]
+                # Loop if we have a problem with the image, selecting the next.
                 while not stream_YAI(url, client_socket, gfx_mode):
-                    print('Problem with image trying another...')
+                    print(f'Problem with %s trying another...', url)
                     url_idx = random.randint(0, len(urls)-1)
                     url = urls[url_idx]
                     time.sleep(1)
 
+            elif tokens[0] == 'showurl':
+                for token in tokens[1:]:
+                    if not stream_YAI(token, client_socket, gfx_mode):
+                        print('Problem with image', token)
+                        time.sleep(1)
+                done = True
+
             elif tokens[0] == 'next':
                 url_idx = random.randint(0, len(urls)-1)
                 url = urls[url_idx]
+                # Loop if we have a problem with the image, selecting the next.
                 while not stream_YAI(url, client_socket, gfx_mode):
                     print('Problem with image trying another...')
                     url_idx = random.randint(0, len(urls)-1)

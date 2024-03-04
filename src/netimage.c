@@ -4,7 +4,6 @@
 #include "netimage.h"
 #include "settings.h"
 #include "types.h"
-//#include "fujinet-io.h"
 
 #include <atari.h>
 #include <conio.h>
@@ -59,7 +58,7 @@ void stream_image(char* args[])
 
     // Send which graphics mode we are in
     memset(buff, 0, 256);
-    sprintf(buff, "gfx %d ", settings.gfx_mode &= ~GRAPHICS_CONSOLE_EN);
+    sprintf((char*)buff, "gfx %d ", settings.gfx_mode &= ~GRAPHICS_CONSOLE_EN);
     if(FN_ERR_OK != network_write(settings.url, buff, 6))
     {
         show_console();
@@ -68,21 +67,40 @@ void stream_image(char* args[])
         return;
     }
 
-    // Build up the search string
-    memset(buff, 0, 256);
-    memcpy(buff, "search \"", 8);
-    for(i = 0; i < 8; ++i)
+    if(0 == strncmp(args[0], "http", 4))
     {
-        if(0x0 == args[i])
-            break;
+        // Build up the search string
+        memset(buff, 0, 256);
+        memcpy(buff, "showurl \"", 8);
+        for(i = 0; i < 8; ++i)
+        {
+            if(0x0 == args[i])
+                break;
 
-        if(i > 0)
-            strcat(buff, " ");
-        strcat(buff, args[i]);
+            if(i > 0)
+                strcat(buff, " ");
+            strcat(buff, args[i]);
+        }
+        strcat(buff, "\"");
     }
-    strcat(buff, "\"");
+    else
+    {
+        // Build up the search string
+        memset(buff, 0, 256);
+        memcpy(buff, "search \"", 8);
+        for(i = 0; i < 8; ++i)
+        {
+            if(0x0 == args[i])
+                break;
 
-    i = strlen(buff);
+            if(i > 0)
+                strcat((char*)buff, " ");
+            strcat((char*)buff, args[i]);
+        }
+        strcat((char*)buff, "\"");
+    }
+
+    i = strlen((char*)buff);
 
     if(FN_ERR_OK != network_write(settings.url, buff, i))
     {
@@ -101,7 +119,7 @@ void stream_image(char* args[])
         }
         else
         {
-            buffer_start = image.data;
+            buffer_start = (ushort)image.data;
             block_size = DISPLAYLIST_BLOCK_SIZE;
             lines_per_block = (ushort)(block_size/bytes_per_line);
             dl_block_size = lines_per_block * bytes_per_line;
@@ -125,7 +143,7 @@ void stream_image(char* args[])
                     read_size = ttl_buff_size;
 
                 clrscr();
-                if(FN_ERR_OK != network_read(settings.url, buffer_start, read_size))
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)buffer_start, read_size))
                 {
                     show_console();
                     cprintf("Error reading\n\r");
@@ -143,7 +161,7 @@ void stream_image(char* args[])
                 if(kbhit())
                     break;
 
-            if(FN_ERR_OK != network_write(settings.url, "next", 4))
+            if(FN_ERR_OK != network_write(settings.url, (uint8_t*)"next", 4))
             {
                 show_console();
                 cprintf("Unable to write request\n\r");
@@ -154,7 +172,7 @@ void stream_image(char* args[])
         OS.atract = 0x00;   // disable attract mode
     }
 
-    if(FN_ERR_OK != network_write(settings.url, "quit", 4))
+    if(FN_ERR_OK != network_write(settings.url, (uint8_t*)"quit", 4))
     {
         show_console();
         cprintf("Unable to write request\n\r");

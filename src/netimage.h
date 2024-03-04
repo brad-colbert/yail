@@ -17,5 +17,6 @@ signed char check_network(const char* url);
 signed char write_network(const char* url, const char* buf, unsigned short len);
 signed char read_network(const char* url, unsigned char* buf, unsigned short len);
 void stream_image(char* args[]);
+void show_image(char* args[]);
 
 #endif // NETIMAGE_H

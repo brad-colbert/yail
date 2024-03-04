@@ -18,7 +18,7 @@
 //
 char version[] = "YAIL (Yet Another Image Loader) v" TOSTR(MAJOR_VERSION) "." TOSTR(MINOR_VERSION) "." TOSTR(BUILD_VERSION);
 
-char buff[256]; // A block of memory to be used by all.
+byte buff[256]; // A block of memory to be used by all.
 bool done = false;
 extern Settings settings;
 

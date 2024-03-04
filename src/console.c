@@ -222,7 +222,7 @@ void process_command(byte ntokens)
         }
     }
 
-    if(strncmp(tokens[0], "stream", 3) == 0)
+    if(0 == strncmp(tokens[0], "stream", 3))
     {
         if(ntokens < 2)
         {
@@ -243,6 +243,29 @@ void process_command(byte ntokens)
             stream_image(&tokens[1]);
         }
     }
+
+    if(strncmp(tokens[0], "showurl", 3) == 0)
+    {
+        if(ntokens < 2)
+        {
+            gotoxy(0,0);
+            cputs("ERROR: URL not specified");
+            cgetc();
+        }
+        else
+        {
+            #ifdef DEBUG_CONSOLE
+            byte i;
+            for(i = 0; tokens[i] != 0x0; i++)
+                cprintf("*%s ", tokens[i]);
+
+            cputs("\n\r");
+            #endif
+
+            stream_image(&tokens[1]);
+        }
+    }
+
 }
 
 void start_console(char first_char)
