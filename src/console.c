@@ -222,7 +222,7 @@ void process_command(byte ntokens)
         }
     }
 
-    if(strncmp(tokens[0], "stream", 3) == 0)
+    if(0 == strncmp(tokens[0], "stream", 3))
     {
         if(ntokens < 2)
         {
@@ -262,7 +262,7 @@ void process_command(byte ntokens)
             cputs("\n\r");
             #endif
 
-            show_image(&tokens[1]);
+            stream_image(&tokens[1]);
         }
     }
 
