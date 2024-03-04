@@ -71,7 +71,7 @@ void stream_image(char* args[])
     {
         // Build up the search string
         memset(buff, 0, 256);
-        memcpy(buff, "showurl \"", 8);
+        memcpy(buff, "showurl ", 8);
         for(i = 0; i < 8; ++i)
         {
             if(0x0 == args[i])
@@ -81,7 +81,6 @@ void stream_image(char* args[])
                 strcat(buff, " ");
             strcat(buff, args[i]);
         }
-        strcat(buff, "\"");
     }
     else
     {
