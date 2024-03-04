@@ -19,6 +19,9 @@
 #include <string.h>
 #include <stdbool.h>
 
+//
+#define WORKING_BUFF_SIZE 200
+
 // Externs
 extern char version[];
 extern bool done;
@@ -306,21 +309,21 @@ void start_console(char first_char)
             case CH_ENTER:
             {
                 // process the tokens
-                #define WORKING_BUFF_SIZE 80
-                byte buff[WORKING_BUFF_SIZE];  // two lines of data
+                byte work_buff[WORKING_BUFF_SIZE];  // five lines of data
                 byte ntokens = 0;
 
-                memcpy(buff, CONSOLE_BUFF, WORKING_BUFF_SIZE);
-                internal_to_atascii((char*)buff, WORKING_BUFF_SIZE);
+                memset(work_buff, 0, WORKING_BUFF_SIZE);  // clear five lines of data
+                memcpy(work_buff, CONSOLE_BUFF, WORKING_BUFF_SIZE);
+                internal_to_atascii((char*)work_buff, WORKING_BUFF_SIZE);
 
                 #ifdef DEBUG_CONSOLE
                 gotoxy(0,1);
                 cprintf("%s\n\r", CONSOLE_BUFF);
-                cprintf("%s", buff);
+                cprintf("%s", work_buff);
                 cgetc();
                 #endif
 
-                ntokens = get_tokens(buff, x);// + 1);
+                ntokens = get_tokens(work_buff, x);
 
                 #ifdef DEBUG_CONSOLE
                 gotoxy(0,4);
