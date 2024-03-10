@@ -92,10 +92,10 @@ byte get_tokens(byte* buff, byte endx)
     return count;
 }
 
-void process_command(byte ntokens)
+char process_command(byte ntokens)
 {
     if(!ntokens)
-        return;
+        return 0x0;
 
     if(strncmp(tokens[0], "help", 4) == 0)
     {
@@ -120,11 +120,7 @@ void process_command(byte ntokens)
     }
 
     if(strncmp(tokens[0], "quit", 4) == 0)
-    {
         done = TRUE;
-
-        return;
-    }
 
     if(strncmp(tokens[0], "gfx", 3) == 0)
     {
@@ -243,7 +239,7 @@ void process_command(byte ntokens)
             cputs("\n\r");
             #endif
 
-            stream_image(&tokens[1]);
+            return stream_image(&tokens[1]);
         }
     }
 
@@ -265,10 +261,11 @@ void process_command(byte ntokens)
             cputs("\n\r");
             #endif
 
-            stream_image(&tokens[1]);
+            return stream_image(&tokens[1]);
         }
     }
 
+    return 0x0;
 }
 
 void start_console(char first_char)
@@ -292,6 +289,9 @@ void start_console(char first_char)
     {
         byte input = first_char?first_char:cgetc();
         byte x = wherex();
+
+        // Already used so reset
+        first_char = 0x00;
 
         // Handle quit
         if(input == CH_ESC)
@@ -361,17 +361,20 @@ void start_console(char first_char)
                 {
                     byte i;
                     reset_console();
-                    process_command(ntokens);
+                    first_char = process_command(ntokens);
 
                     // Clear the tokens for the next command
                     for(i = 0; i < 7; ++i)
                         tokens[i] = 0x0;
                 }
 
-                reset_console();
-                hide_console();
-                cursor(0);
-                return;
+                if(0x0 == first_char)  // the user had no input while processing the command, let's reset
+                {
+                    reset_console();
+                    hide_console();
+                    cursor(0);
+                    return;
+                }
             }
             break;
 
@@ -402,7 +405,5 @@ void start_console(char first_char)
                 }
                 cputc(input);
         }
-
-        first_char = 0x00;
     }
 }

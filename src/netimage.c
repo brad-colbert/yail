@@ -17,8 +17,9 @@ extern byte buff[];
 extern ImageData image;
 extern Settings settings;
 
-void stream_image(char* args[])
+char stream_image(char* args[])
 {
+    byte ATRACT_MODE_SAVE = OS.atract;
     const ushort bytes_per_line = 40;
     const ushort lines = 220;
     ushort buffer_start;
@@ -28,6 +29,7 @@ void stream_image(char* args[])
     ushort ttl_buff_size;
     ushort read_size;
     ushort i;
+    char input;
 
     OS.soundr = 0; // Turn off SIO beeping sound
 
@@ -45,7 +47,7 @@ void stream_image(char* args[])
         show_console();
         cputs("Failed to initialize network\n\r");
         network_close(settings.url);
-        return;
+        return 0x0;
     }
 
     if(FN_ERR_OK != network_open(settings.url, 12, 0))
@@ -53,7 +55,7 @@ void stream_image(char* args[])
         show_console();
         cprintf("Failed to open %s\n\r", settings.url);
         network_close(settings.url);
-        return;
+        return 0x0;
     }
 
     // Send which graphics mode we are in
@@ -64,7 +66,7 @@ void stream_image(char* args[])
         show_console();
         cprintf("Unable to write graphics mode \"%s\"\n\r", buff);
         network_close(settings.url);
-        return;
+        return 0x0;
     }
 
     if(0 == strncmp(args[0], "http", 4))
@@ -106,27 +108,36 @@ void stream_image(char* args[])
         show_console();
         cprintf("Unable to write request\n\r");
         network_close(settings.url);
-        return;
+        return 0x0;
     }
 
     while(true)
     {
-        if(kbhit())
+        buffer_start = (ushort)image.data;
+        block_size = DISPLAYLIST_BLOCK_SIZE;
+        lines_per_block = (ushort)(block_size/bytes_per_line);
+        dl_block_size = lines_per_block * bytes_per_line;
+        ttl_buff_size = lines * bytes_per_line;
+        read_size = dl_block_size;
+
+        // Read the header
+        if(FN_ERR_OK != network_read(settings.url, (unsigned char*)&image.header, sizeof(image.header)))
         {
-            cgetc();
+            show_console();
+            cprintf("Error reading\n\r");
+            network_close(settings.url);
             break;
         }
-        else
-        {
-            buffer_start = (ushort)image.data;
-            block_size = DISPLAYLIST_BLOCK_SIZE;
-            lines_per_block = (ushort)(block_size/bytes_per_line);
-            dl_block_size = lines_per_block * bytes_per_line;
-            ttl_buff_size = lines * bytes_per_line;
-            read_size = dl_block_size;
 
-            // Read the header
-            if(FN_ERR_OK != network_read(settings.url, (unsigned char*)&image.header, sizeof(image.header)))
+        setGraphicsMode(image.header.gfx);
+
+        while(ttl_buff_size > 0)
+        {
+            if(read_size > ttl_buff_size)
+                read_size = ttl_buff_size;
+
+            clrscr();
+            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)buffer_start, read_size))
             {
                 show_console();
                 cprintf("Error reading\n\r");
@@ -134,43 +145,39 @@ void stream_image(char* args[])
                 break;
             }
 
-            setGraphicsMode(image.header.gfx);
+            buffer_start = buffer_start + block_size;
+            ttl_buff_size = ttl_buff_size - read_size;
+        }
 
-            while(ttl_buff_size > 0)
+        // Wait for keypress
+        i = 0;
+        while(i++ < 30000)   // roughly 5 seconds
+            if(kbhit())
             {
-                if(read_size > ttl_buff_size)
-                    read_size = ttl_buff_size;
-
-                clrscr();
-                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)buffer_start, read_size))
+                input = cgetc();
+                if(CH_ENTER == input)   // pause
+                {
+                    cgetc();            // any key to resume
+                    input = 0x0;
+                }
+                else  // a key was pressed so let's assume it's a command and process it by quitting and returning the key
                 {
                     show_console();
-                    cprintf("Error reading\n\r");
-                    network_close(settings.url);
-                    break;
+                    goto quit;
                 }
-
-                buffer_start = buffer_start + block_size;
-                ttl_buff_size = ttl_buff_size - read_size;
             }
 
-            // Wait for keypress
-            i = 0;
-            while(i++ < 30000)   // roughly 5 seconds
-                if(kbhit())
-                    break;
-
-            if(FN_ERR_OK != network_write(settings.url, (uint8_t*)"next", 4))
-            {
-                show_console();
-                cprintf("Unable to write request\n\r");
-                break;
-            }
+        if(FN_ERR_OK != network_write(settings.url, (uint8_t*)"next", 4))
+        {
+            show_console();
+            cprintf("Unable to write request\n\r");
+            break;
         }
 
         OS.atract = 0x00;   // disable attract mode
     }
 
+quit:
     if(FN_ERR_OK != network_write(settings.url, (uint8_t*)"quit", 4))
     {
         show_console();
@@ -180,4 +187,7 @@ void stream_image(char* args[])
     network_close(settings.url);
 
     OS.soundr = 3; // Restore SIO beeping sound
+    OS.atract = ATRACT_MODE_SAVE;
+
+    return input;
 }

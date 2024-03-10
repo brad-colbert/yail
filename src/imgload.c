@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
                     ch = 0x00;
                 
                 show_console();
-                start_console(ch);
+                start_console(ch);   // send the character just entered so the console will start with it shown
             }
         }
 
