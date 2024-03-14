@@ -2,6 +2,7 @@
 #include "fujinet-network.h"
 #include "graphics.h"
 #include "netimage.h"
+#include "utility.h"
 #include "settings.h"
 #include "types.h"
 
@@ -16,6 +17,12 @@
 extern byte buff[];
 extern ImageData image;
 extern Settings settings;
+
+void show_error_and_close_network(const char* message)
+{
+    show_error(message);
+    network_close(settings.url);
+}
 
 char stream_image(char* args[])
 {
@@ -44,17 +51,19 @@ char stream_image(char* args[])
 
     if(FN_ERR_OK != network_init())
     {
-        show_console();
-        cputs("Failed to initialize network\n\r");
-        network_close(settings.url);
+        //show_console();
+        //cputs("Failed to initialize network\n\r");
+        //network_close(settings.url);
+        show_error_and_close_network("Failed to initialize network\n\r");
         return 0x0;
     }
 
     if(FN_ERR_OK != network_open(settings.url, 12, 0))
     {
-        show_console();
-        cprintf("Failed to open %s\n\r", settings.url);
-        network_close(settings.url);
+        //show_console();
+        //cprintf("Failed to open %s\n\r", settings.url);
+        //network_close(settings.url);
+        show_error_and_close_network("Failed to open URL\n\r");
         return 0x0;
     }
 
@@ -63,9 +72,10 @@ char stream_image(char* args[])
     sprintf((char*)buff, "gfx %d ", settings.gfx_mode &= ~GRAPHICS_CONSOLE_EN);
     if(FN_ERR_OK != network_write(settings.url, buff, 6))
     {
-        show_console();
-        cprintf("Unable to write graphics mode \"%s\"\n\r", buff);
-        network_close(settings.url);
+        //show_console();
+        //cprintf("Unable to write graphics mode \"%s\"\n\r", buff);
+        //network_close(settings.url);
+        show_error_and_close_network("Unable to write graphics mode\n\r");
         return 0x0;
     }
 
@@ -105,9 +115,10 @@ char stream_image(char* args[])
 
     if(FN_ERR_OK != network_write(settings.url, buff, i))
     {
-        show_console();
-        cprintf("Unable to write request\n\r");
-        network_close(settings.url);
+        //show_console();
+        //cprintf("Unable to write request\n\r");
+        //network_close(settings.url);
+        show_error_and_close_network("Unable to write request\n\r");
         return 0x0;
     }
 
@@ -123,9 +134,10 @@ char stream_image(char* args[])
         // Read the header
         if(FN_ERR_OK != network_read(settings.url, (unsigned char*)&image.header, sizeof(image.header)))
         {
-            show_console();
-            cprintf("Error reading\n\r");
-            network_close(settings.url);
+            //show_console();
+            //cprintf("Error reading\n\r");
+            //network_close(settings.url);
+            show_error_and_close_network("Error reading\n\r");
             break;
         }
 
@@ -139,9 +151,10 @@ char stream_image(char* args[])
             clrscr();
             if(FN_ERR_OK != network_read(settings.url, (uint8_t*)buffer_start, read_size))
             {
-                show_console();
-                cprintf("Error reading\n\r");
-                network_close(settings.url);
+                //show_console();
+                //cprintf("Error reading\n\r");
+                //network_close(settings.url);
+                show_error_and_close_network("Error reading\n\r");
                 break;
             }
 
@@ -169,8 +182,9 @@ char stream_image(char* args[])
 
         if(FN_ERR_OK != network_write(settings.url, (uint8_t*)"next", 4))
         {
-            show_console();
-            cprintf("Unable to write request\n\r");
+            //show_console();
+            //cprintf("Unable to write request\n\r");
+            show_error("Unable to write request\n\r");
             break;
         }
 
@@ -180,8 +194,9 @@ char stream_image(char* args[])
 quit:
     if(FN_ERR_OK != network_write(settings.url, (uint8_t*)"quit", 4))
     {
-        show_console();
-        cprintf("Unable to write request\n\r");
+        //show_console();
+        //cprintf("Unable to write request\n\r");
+        show_error("Unable to write quit request\n\r");
     }
 
     network_close(settings.url);

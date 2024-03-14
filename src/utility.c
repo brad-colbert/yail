@@ -1,6 +1,7 @@
 // Copyright (C) 2021 Brad Colbert
 
 #include "utility.h"
+#include "graphics.h"
 #include "types.h"
 
 #include <conio.h>
@@ -47,4 +48,10 @@ void atascii_to_internal(char* buff, byte len)
                 buff[i] -= 32;
             // otherwise leave it alone
     }
+}
+
+void show_error(const char* message)
+{
+    show_console();
+    cputs(message);
 }
