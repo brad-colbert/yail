@@ -30,6 +30,7 @@ extern void* ORG_SDLIST;
 extern void graphics_8_console_dl[];
 extern void graphics_9_console_dl[];
 extern Settings settings;
+extern byte buff[];
 
 // Globals
 bool console_state = false;
@@ -99,22 +100,24 @@ char process_command(byte ntokens)
 
     if(strncmp(tokens[0], "help", 4) == 0)
     {
-        const char help[] =
+        byte SAVED_MODE = settings.gfx_mode;
+
+        setGraphicsMode(GRAPHICS_0);
+        //const char help[] =
+        cputs(
         "quit - Exit this utility\n\r"
         "cls  - Clear the image display\n\r"
-        "gfx  - [0,8,9] Set the graphics mode\n\r"
+        "gfx  - [0,8,9,*] Set the graphics mode\n\r"
         "set  - Saved settings\n\r"
         "       server [url] (N:TCP://blah.duh/)\n\r"
         #ifdef YAIL_BUILD_FILE_LOADER
         "load - [filename] Load and display file\n\r"
         "save - [filename] Save memory to YAI\n\r";
         #else
-        "stream - [arg0...argN] Stream images\n\r";
+        "stream - [arg0...argN] Stream images\n\r"
         #endif
-        byte SAVED_MODE = settings.gfx_mode;
+        );
 
-        setGraphicsMode(GRAPHICS_0);
-        cputs(help);                              // Show the help text
         cgetc();                                  // Wait
         setGraphicsMode(SAVED_MODE);              // Restore the graphics mode
     }
@@ -147,11 +150,14 @@ char process_command(byte ntokens)
                             break;
                     }
                     break;
+                case '*':
+                    settings.gfx_mode = '*';  // Randomize the graphics mode
+                    break;
             }
         }
 
         // Save the graphics mode if not in text mode
-        if(settings.gfx_mode > GRAPHICS_0)
+        if(settings.gfx_mode > GRAPHICS_0 && settings.gfx_mode <= GRAPHICS_11)
             put_settings(SETTINGS_GFX);  // save the graphics mode on the FN
     }
 
@@ -217,6 +223,17 @@ char process_command(byte ntokens)
             {
                 strncpy(settings.url, tokens[2], SERVER_URL_SIZE);
                 put_settings(SETTINGS_URL);  // save the URL on the FN
+            }
+            else if(strncmp(tokens[1], "mode", 3) == 0)
+            {
+                if(strncmp(tokens[2], "random", 3) == 0)
+                {
+                    // This is a bit of a cheat.  The stored mode is * and this doesn't
+                    // change the rendered mode without calling setGraphicsMode (which we aren't).
+                    // This should get sent to the server during the stream command handling.
+                    // The server will use this setting to randomize the graphics per image.
+                    settings.gfx_mode = '*';
+                }
             }
         }
     }

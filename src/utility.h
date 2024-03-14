@@ -11,5 +11,6 @@
 void pause(const char* message);
 void internal_to_atascii(char* buff, byte len);
 void atascii_to_internal(char* buff, byte len);
+void show_error(const char* message);
 
 #endif

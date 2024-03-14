@@ -20,6 +20,7 @@ import numpy as np
 
 GRAPHICS_8 = 2
 GRAPHICS_9 = 4
+GRAPHICS_RANDOM = 42   # *
 
 bind_ip = '0.0.0.0'
 bind_port = 5556
@@ -100,7 +101,13 @@ def convertToYai(image, gfx_mode):
         gray = background
         print(f'Taller than 4:3  :  {gray.size[0]}->{new_width}')
 
-    if gfx_mode == GRAPHICS_8:
+    mode_to_use = GRAPHICS_8
+    if GRAPHICS_RANDOM == gfx_mode:
+        mode_to_use = random.choice([GRAPHICS_8, GRAPHICS_9])
+    else:
+        mode_to_use = gfx_mode
+
+    if mode_to_use == GRAPHICS_8:
         bw_dither = gray.resize((320,220)).convert('1')
         data = convert_BW_image_to_bits(bw_dither)
 
@@ -129,7 +136,7 @@ def convertToYai(image, gfx_mode):
 
     image_yai = bytearray()
     image_yai += bytes([1, 1, 0])            # version
-    image_yai += bytes([gfx_mode])         # Gfx mode (8,9)
+    image_yai += bytes([mode_to_use])         # Gfx mode (8,9)
     image_yai += bytes([3])                  # Memory block type
     image_yai += struct.pack("<H", ttlbytes) # num bytes height x width
     image_yai += bytearray(data)     # image
@@ -137,7 +144,7 @@ def convertToYai(image, gfx_mode):
     if show_image:
         try:
             image.show()
-            if gfx_mode == GRAPHICS_8:
+            if GRAPHICS_8 == mode_to_use:
                 bw_dither.show()
             else:
                 pil_image_yai = Image.fromarray(data, mode='L')
