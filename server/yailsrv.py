@@ -242,6 +242,7 @@ def stream_YAI(url, client, gfx_mode):
     # download the body of response by chunk, not immediately
     try:
         print('Loading', url, url.encode())
+        file_size = 0
 
         response = requests.get(url, stream=True)
         
@@ -358,6 +359,7 @@ def handle_client_connection(client_socket):
         #loop.close()  # Close the loop when done
 
 def main():
+    connections = 0
     while True:
         client_sock, address = server.accept()
         print('Accepted connection from {}:{}'.format(address[0], address[1]))
@@ -365,7 +367,9 @@ def main():
             target=handle_client_connection,
             args=(client_sock,)  # without comma you'd get a... TypeError: handle_client_connection() argument after * must be a sequence, not _socketobject
         )
+        connections += 1
         client_handler.start()
+        print('Connections:', connections)
 
 if __name__ == "__main__":
     main()
