@@ -6,7 +6,7 @@ CL65=$(CC65_HOME)\\cl65.exe
 PRODUCT=YAIL
 TARGET=atari
 SRC_DIR=src
-CFLAGS=-Or
+CFLAGS=-Osri
 LINKFLAGS=
 #LINKFLAGS=--debug-info -Wl --dbgfile,"myapp.dbg"
 # -D__SYSTEM_CHECK__=1
@@ -48,6 +48,12 @@ s_products: $(SRC_DIR)\*.s
     del $(**:.s=.o)
 
 atr: $(PRODUCT).XEX
-    copy $(PRODUCT).XEX atr
-    dir2atr -D $(PRODUCT).ATR atr
+    copy DOS.SYS atr\\
+    copy $(PRODUCT).XEX atr\AUTORUN.SYS
 
+disk: atr
+    @echo Building bootable disk
+    dir2atr -E -b Dos25 -P $(PRODUCT).ATR atr
+
+debug: disk
+  Altirra64 /defprofile:xl /ntsc /burstio /fastboot /debug /debugbrkrun /debugcmd: ".loadsym $(PRODUCT).lbl" /disk $(PRODUCT).ATR
