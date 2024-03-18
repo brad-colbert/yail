@@ -244,7 +244,7 @@ def stream_YAI(url, client, gfx_mode):
         print('Loading', url, url.encode())
         file_size = 0
 
-        response = requests.get(url, stream=True)
+        response = requests.get(url, stream=True, timeout=30)
         
         # get the total file size
         file_size = int(response.headers.get("Content-Length", 0))

@@ -79,6 +79,9 @@ int main(int argc, char* argv[])
         get_settings();
         clearFrameBuffer();
 
+        // Stop the attract mode
+        add_attract_disable_vbi();
+
         // Show console on startup
         show_console();
         start_console(0x00);
