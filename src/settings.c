@@ -41,46 +41,56 @@ uint8_t get_settings()
     // Get/Create the URL setting
     memset(&data, 0, sizeof(AppKeyDataBlock));
 
-    sio_openkey(&data, 0, FN_URL_KEY_ID);
-    r = fn_io_appkey_read(&data.read);  // Try to read the key
-
-    if (1 == r) // key doesn't exist. write the default.
+    r = sio_openkey(&data, 0, FN_URL_KEY_ID);
+    if (0 == r)
     {
-        byte keylen = strlen(DEFAULT_URL);
+        r = fn_io_appkey_read(&data.read);  // Try to read the key
 
+        if (1 == r) // key doesn't exist. write the default.
+        {
+            byte keylen = strlen(DEFAULT_URL);
+
+            strncpy(settings.url, DEFAULT_URL, MAX_APPKEY_LEN);
+            sio_openkey(&data, 1, FN_URL_KEY_ID);
+            strncpy((char *)data.write.value, settings.url, MAX_APPKEY_LEN);
+            r = fn_io_appkey_write(keylen, &data.write);
+
+            if(1 == r)
+                return r;
+        }
+        else
+        {
+            memset(settings.url, 0, SERVER_URL_SIZE);
+            strncpy(settings.url, (char*)data.read.value, data.read.length);
+        }
+    }
+    else // use default
         strncpy(settings.url, DEFAULT_URL, MAX_APPKEY_LEN);
-        sio_openkey(&data, 1, FN_URL_KEY_ID);
-        strncpy((char *)data.write.value, settings.url, MAX_APPKEY_LEN);
-        r = fn_io_appkey_write(keylen, &data.write);
-
-        if(1 == r)
-            return r;
-    }
-    else
-    {
-        memset(settings.url, 0, SERVER_URL_SIZE);
-        strncpy(settings.url, (char*)data.read.value, data.read.length);
-    }
 
     // Get/Create the gfx mode setting
     memset(&data, 0, sizeof(AppKeyDataBlock));
 
-    sio_openkey(&data, 0, FN_GFX_KEY_ID);
-    r = fn_io_appkey_read(&data.read);    // Try to read the key
-
-    if (1 == r) // key doesn't exist. write the default.
+    r = sio_openkey(&data, 0, FN_GFX_KEY_ID);
+    if (0 == r)
     {
-        sio_openkey(&data, 1, FN_GFX_KEY_ID);
-        data.write.value[0] = DEFAULT_GFX_MODE;
-        r = fn_io_appkey_write(1, &data.write);
+        r = fn_io_appkey_read(&data.read);    // Try to read the key
 
-        if(1 == r)
-            return r;
+        if (1 == r) // key doesn't exist. write the default.
+        {
+            sio_openkey(&data, 1, FN_GFX_KEY_ID);
+            data.write.value[0] = DEFAULT_GFX_MODE;
+            r = fn_io_appkey_write(1, &data.write);
 
-        setGraphicsMode(DEFAULT_GFX_MODE);   
+            if(1 == r)
+                return r;
+
+            setGraphicsMode(DEFAULT_GFX_MODE);   
+        }
+        else
+            setGraphicsMode(((byte*)data.read.value)[0]);
     }
-    else
-        setGraphicsMode(((byte*)data.read.value)[0]);   
+    else // use default
+        setGraphicsMode(DEFAULT_GFX_MODE);
 
     // Add more settings below...
 
@@ -100,7 +110,8 @@ uint8_t put_settings(byte select)
             {
                 byte keylen = strlen(settings.url);
 
-                sio_openkey(&data, 1, FN_URL_KEY_ID);
+                if (0 == sio_openkey(&data, 1, FN_URL_KEY_ID))
+                    return 1;
                 strncpy((char *)data.write.value, settings.url, MAX_APPKEY_LEN);
                 r = fn_io_appkey_write(keylen, &data.write);
 
@@ -110,7 +121,8 @@ uint8_t put_settings(byte select)
             break;
         case SETTINGS_GFX:
             {
-                sio_openkey(&data, 1, FN_GFX_KEY_ID);
+                if (0 == sio_openkey(&data, 1, FN_GFX_KEY_ID))
+                    return 1;
                 data.write.value[0] = settings.gfx_mode & ~GRAPHICS_CONSOLE_EN;  // Don't capture the console bit
                 r = fn_io_appkey_write(1, &data.write);
 
