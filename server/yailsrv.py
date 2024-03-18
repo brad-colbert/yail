@@ -16,6 +16,7 @@ from fastcore.all import *
 from pprint import pprint
 from PIL import Image
 import numpy as np
+import sys
 #import asyncio
 
 GRAPHICS_8 = 2
@@ -358,8 +359,15 @@ def handle_client_connection(client_socket):
         client_socket.close()
         #loop.close()  # Close the loop when done
 
+import signal
+def handler(signum, frame):
+    print('SIGINT: Exiting...')
+    sys.exit(1)
+ 
+signal.signal(signal.SIGINT, handler)
+
 def main():
-    connections = 0
+    threads = []
     while True:
         client_sock, address = server.accept()
         print('Accepted connection from {}:{}'.format(address[0], address[1]))
@@ -367,9 +375,16 @@ def main():
             target=handle_client_connection,
             args=(client_sock,)  # without comma you'd get a... TypeError: handle_client_connection() argument after * must be a sequence, not _socketobject
         )
-        connections += 1
+        client_handler.daemon = True
         client_handler.start()
-        print('Connections:', connections)
+        threads.append(client_handler)
+        print('Connections:', len(threads))
+    '''
+    try:
+    except KeyboardInterrupt:
+        print("Ctrl+C pressed...")
+        sys.exit(1)
+    '''
 
 if __name__ == "__main__":
     main()
