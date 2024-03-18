@@ -361,9 +361,8 @@ def handle_client_connection(client_socket):
 
 import signal
 def handler(signum, frame):
-    res = input("Ctrl-c was pressed. Do you really want to exit? y/n ")
-    if res == 'y':
-        sys.exit(1)
+    print('SIGINT: Exiting...')
+    sys.exit(1)
  
 signal.signal(signal.SIGINT, handler)
 
