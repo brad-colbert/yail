@@ -110,8 +110,11 @@ uint8_t put_settings(byte select)
             {
                 byte keylen = strlen(settings.url);
 
-                if (0 == sio_openkey(&data, 1, FN_URL_KEY_ID))
+                r = sio_openkey(&data, 1, FN_URL_KEY_ID);
+
+                if (1 == r)
                     return 1;
+                    
                 strncpy((char *)data.write.value, settings.url, MAX_APPKEY_LEN);
                 r = fn_io_appkey_write(keylen, &data.write);
 
@@ -121,8 +124,11 @@ uint8_t put_settings(byte select)
             break;
         case SETTINGS_GFX:
             {
-                if (0 == sio_openkey(&data, 1, FN_GFX_KEY_ID))
+                r = sio_openkey(&data, 1, FN_GFX_KEY_ID);
+
+                if (1 == r)
                     return 1;
+
                 data.write.value[0] = settings.gfx_mode & ~GRAPHICS_CONSOLE_EN;  // Don't capture the console bit
                 r = fn_io_appkey_write(1, &data.write);
 

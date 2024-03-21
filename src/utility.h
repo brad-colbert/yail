@@ -13,5 +13,6 @@ void internal_to_atascii(char* buff, byte len);
 void atascii_to_internal(char* buff, byte len);
 void show_error(const char* message);
 extern void add_attract_disable_vbi();
+extern void remove_attract_disable_vbi();
 
 #endif
