@@ -21,6 +21,7 @@ char version[] = "YAIL (Yet Another Image Loader) v" TOSTR(MAJOR_VERSION) "." TO
 byte buff[256]; // A block of memory to be used by all.
 bool done = false;
 extern Settings settings;
+extern ushort ORIG_VBII_SAVE;
 
 void help()
 {
@@ -80,6 +81,7 @@ int main(int argc, char* argv[])
         clearFrameBuffer();
 
         // Stop the attract mode
+        ORIG_VBII_SAVE = OS.vvblki;
         add_attract_disable_vbi();
 
         // Show console on startup

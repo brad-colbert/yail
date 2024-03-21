@@ -6,6 +6,10 @@
 
 #include <conio.h>
 #include <stdbool.h>
+#include <atari.h>
+
+// Globals
+ushort ORIG_VBII_SAVE;// = OS.vvblki;
 
 void pause(const char* message)
 {

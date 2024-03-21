@@ -25,6 +25,7 @@ GRAPHICS_RANDOM = 42   # *
 
 bind_ip = '0.0.0.0'
 bind_port = 5556
+connections = 0
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.bind((bind_ip, bind_port))
@@ -299,6 +300,10 @@ def handle_client_connection(client_socket):
     # Set up a new event loop for this thread
     #loop = asyncio.new_event_loop()
     #asyncio.set_event_loop(loop)
+    global connections
+
+    connections = connections + 1
+    print('Starting Connection:', connections)
 
     gfx_mode = GRAPHICS_9
     try:
@@ -357,6 +362,9 @@ def handle_client_connection(client_socket):
 
     finally:
         client_socket.close()
+        print('Closing Connection:', connections)
+        connections = connections - 1
+
         #loop.close()  # Close the loop when done
 
 import signal
@@ -367,7 +375,7 @@ def handler(signum, frame):
 signal.signal(signal.SIGINT, handler)
 
 def main():
-    threads = []
+    #threads = []
     while True:
         client_sock, address = server.accept()
         print('Accepted connection from {}:{}'.format(address[0], address[1]))
@@ -377,8 +385,8 @@ def main():
         )
         client_handler.daemon = True
         client_handler.start()
-        threads.append(client_handler)
-        print('Connections:', len(threads))
+        #threads.append(client_handler)
+        #print('Connections:', len(threads))
     '''
     try:
     except KeyboardInterrupt:

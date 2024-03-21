@@ -26,7 +26,6 @@ void show_error_and_close_network(const char* message)
 
 char stream_image(char* args[])
 {
-    byte ATRACT_MODE_SAVE = OS.atract;
     const ushort bytes_per_line = 40;
     const ushort lines = 220;
     ushort buffer_start;
@@ -122,6 +121,10 @@ char stream_image(char* args[])
         return 0x0;
     }
 
+    // We are starting streaming so remove the attract mode disbale VBI becasue we will
+    // diable attract mode ourselves.
+    remove_attract_disable_vbi();
+
     while(true)
     {
         buffer_start = (ushort)image.data;
@@ -202,7 +205,9 @@ quit:
     network_close(settings.url);
 
     OS.soundr = 3; // Restore SIO beeping sound
-    OS.atract = ATRACT_MODE_SAVE;
+
+    // We are no longer streaming so disable attract mode with a VBI
+    add_attract_disable_vbi();
 
     return input;
 }
