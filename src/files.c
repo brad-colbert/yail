@@ -1,10 +1,11 @@
 #ifdef YAIL_BUILD_FILE_LOADER
 // Copyright (C) 2021 Brad Colbert
+#include "version.h"
 #include "files.h"
 #include "console.h"
 #include "readNetPBM.h"
 #include "graphics.h"
-#include "version.h"
+#include "settings.h"
 #include "utility.h"
 
 #include <conio.h>
@@ -16,9 +17,8 @@
 
 // externals
 extern ImageData image;
+extern Settings settings;
 extern byte buff[];
-extern byte CURRENT_MODE;
-extern void graphics_9_console_dl;
 
 // returns a token based on the filetype determined from the extension
 byte imageFileType(const char filename[])
@@ -77,7 +77,7 @@ void saveFile(const char filename[])
         write(fd, &b, 1);
 
         // Write the graphics mode
-        b = CURRENT_MODE & ~GRAPHICS_CONSOLE_EN;
+        b = settings.gfx_mode & ~GRAPHICS_CONSOLE_EN;
         write(fd, &b, 1);
 
         // Write the DLs
