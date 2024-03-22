@@ -18,9 +18,9 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#pragma bss-name (push,"FRAMEBUFFER")
-byte framebuffer[FRAMEBUFFER_SIZE + 32];  // 32 bytes of padding
-#pragma bss-name (pop)
+#pragma data-name (push,"FRAMEBUFFER")
+#include "welcome_splash.h"
+#pragma data-name (pop)
 #pragma optimize(push, off)
 #pragma data-name (push,"GFX8_DL")
 #include "graphics_8_dl.h"

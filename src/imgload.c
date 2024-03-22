@@ -78,16 +78,10 @@ int main(int argc, char* argv[])
 
         // Initialize the settings.  Set defaults if no saved settings are found.
         get_settings();
-        clearFrameBuffer();
 
         // Stop the attract mode
         ORIG_VBII_SAVE = OS.vvblki;
         add_attract_disable_vbi();
-
-        // Show the splash screen
-        OS.sdmctl = 0x0;            // turn off the display
-        stream_image(&argv[1], 1);  // get the splash screen
-        OS.sdmctl = 0x22;           // turn on the display
 
         while(!done)
         {
