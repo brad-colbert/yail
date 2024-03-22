@@ -51,7 +51,7 @@ void process_command_line(char* argv[])
             strcpy(settings.url, argv[2]);
             break;
         case 's':
-            stream_image(&argv[2]);
+            stream_image(&argv[2], 0);
             break;
     }
 }
@@ -84,9 +84,10 @@ int main(int argc, char* argv[])
         ORIG_VBII_SAVE = OS.vvblki;
         add_attract_disable_vbi();
 
-        // Show console on startup
-        show_console();
-        start_console(0x00);
+        // Show the splash screen
+        OS.sdmctl = 0x0;            // turn off the display
+        stream_image(&argv[1], 1);  // get the splash screen
+        OS.sdmctl = 0x22;           // turn on the display
 
         while(!done)
         {
