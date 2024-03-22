@@ -256,7 +256,7 @@ char process_command(byte ntokens)
             cputs("\n\r");
             #endif
 
-            return stream_image(&tokens[1]);
+            return stream_image(&tokens[1], 0);
         }
     }
 
@@ -278,7 +278,7 @@ char process_command(byte ntokens)
             cputs("\n\r");
             #endif
 
-            return stream_image(&tokens[1]);
+            return stream_image(&tokens[1], 0);
         }
     }
 
