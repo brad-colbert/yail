@@ -5,6 +5,6 @@
 
 #define MAJOR_VERSION 1
 #define MINOR_VERSION 2
-#define BUILD_VERSION 19
+#define BUILD_VERSION 20
 
 #endif // YAIL_VERSION_H
