@@ -24,12 +24,13 @@
 #pragma optimize(push, off)
 #pragma data-name (push,"GFX8_DL")
 #include "graphics_8_dl.h"
-#pragma data-name (pop)
-#pragma data-name (push,"GFX8_CONSOLE_DL")
+//#pragma data-name (pop)
+//#pragma data-name (push,"GFX8_CONSOLE_DL")
 #include "graphics_8_console_dl.h"
-#pragma data-name (pop)
-#pragma data-name (push,"GFX9_CONSOLE_DL")
+//#pragma data-name (pop)
+//#pragma data-name (push,"GFX9_CONSOLE_DL")
 #include "graphics_9_console_dl.h"
+#include "graphics_8_s2_dl.h"
 #pragma data-name (pop)
 #pragma optimize(pop)
 
@@ -146,10 +147,15 @@ void setGraphicsMode(const byte mode)
         case GRAPHICS_11_CONSOLE:
             OS.sdlst = &graphics_9_console_dl;
         break;
+
+        case GRAPHICS_8 | GRAPHICS_BUFFER_TWO:
+        case GRAPHICS_9 | GRAPHICS_BUFFER_TWO:
+            OS.sdlst = &graphics_8_s2_dl;
+        break;
     }
 
     // Set graphics mode specifc things
-    switch(mode & ~GRAPHICS_CONSOLE_EN)
+    switch(mode & 0x1F) //GRAPHICS_CONSOLE_EN)
     {
         case GRAPHICS_0:
         case GRAPHICS_8:
@@ -173,22 +179,30 @@ void makeDisplayList(byte mode)
 {
     switch(mode)
     {
-        case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+        case GRAPHICS_0:
             OS.sdlst = ORG_SDLIST;
         break;
-        case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
+        case GRAPHICS_8:
         case GRAPHICS_9:
         case GRAPHICS_10:
         case GRAPHICS_11:
             dlDef.address = &graphics_8_dl;
         break;
-        case GRAPHICS_8_CONSOLE: // {8, DL_MAP320x1x1, 211, 0, 0}
+        case GRAPHICS_8_CONSOLE:
+        case GRAPHICS_8_CONSOLE | GRAPHICS_BUFFER_TWO:  // Switch to front buffer for console
             dlDef.address = &graphics_8_console_dl;
         break;
         case GRAPHICS_9_CONSOLE:
         case GRAPHICS_10_CONSOLE:
         case GRAPHICS_11_CONSOLE:
+        case GRAPHICS_9_CONSOLE | GRAPHICS_BUFFER_TWO:  // Switch to front buffer for console
+        case GRAPHICS_10_CONSOLE | GRAPHICS_BUFFER_TWO: // Switch to front buffer for console
+        case GRAPHICS_11_CONSOLE | GRAPHICS_BUFFER_TWO: // Switch to front buffer for console
             dlDef.address = &graphics_9_console_dl;
+        break;
+        case GRAPHICS_8 | GRAPHICS_BUFFER_TWO:
+        case GRAPHICS_9 | GRAPHICS_BUFFER_TWO:
+            OS.sdlst = &graphics_8_s2_dl;
         break;
     } // switch mode
 }
@@ -197,9 +211,9 @@ void show_console()
 {
     switch(settings.gfx_mode)
     {
-        case GRAPHICS_0: // {0, DL_CHR40x8x1, 1, 0, CONSOLE_MEM}
+        case GRAPHICS_0:
             break;
-        case GRAPHICS_8: // {8, DL_MAP320x1x1, 211, 0, 0}
+        case GRAPHICS_8:
         {
             settings.gfx_mode |= GRAPHICS_CONSOLE_EN;
 
@@ -240,7 +254,6 @@ void hide_console()
             settings.gfx_mode &= (byte)~GRAPHICS_CONSOLE_EN;
 
             makeDisplayList(settings.gfx_mode);
-            //POKEW(SDLSTL, gfxState.dl.address);
 
             OS.sdlst = dlDef.address;
             ANTIC.nmien = 0x40;
@@ -253,7 +266,7 @@ void hide_console()
 
 void clearFrameBuffer(void)
 {
-    memset(framebuffer, 0, FRAMEBUFFER_SIZE + 32);
+    memset(framebuffer, 0, FRAMEBUFFER_SIZE);
 }
 
 // Shows the contents of a display list.
