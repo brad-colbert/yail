@@ -8,7 +8,7 @@ TARGET=atari
 SRC_DIR=src
 #CFLAGS=-Osri
 CFLAGS=-Os
-LINKFLAGS=
+LINKFLAGS=-D__SYSTEM_CHECK__=1
 #LINKFLAGS=--debug-info -Wl --dbgfile,"myapp.dbg"
 # -D__SYSTEM_CHECK__=1
 LIBRARIES=fujinet-lib/fujinet-atari-2.2.1.lib
