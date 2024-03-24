@@ -191,12 +191,12 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
                 show_error_and_close_network("Error reading\n\r");
                 break;
             }
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x8280+BUFFER_TWO_BLOCK_ONE_SIZE+16, BUFFER_TWO_BLOCK_TWO_SIZE))
+            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x9000, BUFFER_TWO_BLOCK_TWO_SIZE))
             {
                 show_error_and_close_network("Error reading\n\r");
                 break;
             }
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x8280+BUFFER_TWO_BLOCK_ONE_SIZE+16+BUFFER_TWO_BLOCK_TWO_SIZE+16, BUFFER_TWO_BLOCK_THREE_SIZE))
+            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0xA000, BUFFER_TWO_BLOCK_THREE_SIZE))
             //if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data+0x8280+BUFFER_TWO_BLOCK_ONE_SIZE+16, BUFFER_TWO_BLOCK_THREE_SIZE))
             {
                 show_error_and_close_network("Error reading\n\r");

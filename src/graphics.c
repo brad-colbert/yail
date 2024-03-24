@@ -24,13 +24,13 @@
 #pragma optimize(push, off)
 #pragma data-name (push,"GFX8_DL")
 #include "graphics_8_dl.h"
-#include "graphics_8_s2_dl.h"
 //#pragma data-name (pop)
 //#pragma data-name (push,"GFX8_CONSOLE_DL")
 #include "graphics_8_console_dl.h"
 //#pragma data-name (pop)
 //#pragma data-name (push,"GFX9_CONSOLE_DL")
 #include "graphics_9_console_dl.h"
+#include "graphics_8_s2_dl.h"
 #pragma data-name (pop)
 #pragma optimize(pop)
 
@@ -96,7 +96,7 @@ void saveCurrentGraphicsState(void)
 {
     ORG_SDLIST = OS.sdlst;
     VDSLIST_STATE = OS.vdslst;
-    NMI_STATE = ANTIC.nmien;
+    //NMI_STATE = ANTIC.nmien;
     ORG_GPRIOR = OS.gprior;       // Save current priority states
     ORG_COLOR1 = OS.color1;
     ORG_COLOR2 = OS.color2;
@@ -104,7 +104,7 @@ void saveCurrentGraphicsState(void)
 
 void restoreGraphicsState(void)
 {
-    ANTIC.nmien = NMI_STATE;
+    ANTIC.nmien = NMIEN_VBI;
     OS.vdslst = VDSLIST_STATE;
     OS.sdlst = ORG_SDLIST;
     OS.color1 = ORG_COLOR1;
@@ -127,7 +127,7 @@ void setGraphicsMode(const byte mode)
     {
         case GRAPHICS_0:
             OS.sdlst = ORG_SDLIST;
-            ANTIC.nmien = NMI_STATE;
+            ANTIC.nmien = NMIEN_VBI; //NMI_STATE;
             OS.vdslst = VDSLIST_STATE;
             OS.botscr = 24;
         break;
@@ -220,7 +220,7 @@ void show_console()
             makeDisplayList(settings.gfx_mode);
 
             OS.sdlst = dlDef.address;
-            ANTIC.nmien = 0x40;
+            ANTIC.nmien = NMIEN_VBI; //0x40;
             OS.botscr = 5;
         }
         break;
@@ -234,7 +234,7 @@ void show_console()
 
             OS.sdlst = dlDef.address;
             OS.vdslst = disable_9_dli;
-            ANTIC.nmien = 0x80 | 0x40;
+            ANTIC.nmien = NMIEN_DLI | NMIEN_VBI; //0x80 | 0x40;
             OS.botscr = 5;
         }
     }
@@ -256,7 +256,7 @@ void hide_console()
             makeDisplayList(settings.gfx_mode);
 
             OS.sdlst = dlDef.address;
-            ANTIC.nmien = 0x40;
+            ANTIC.nmien = NMIEN_VBI; //0x40;
             OS.vdslst = VDSLIST_STATE;
 
             OS.botscr = 0;
