@@ -150,6 +150,12 @@ char process_command(byte ntokens)
                             break;
                     }
                     break;
+                case '2':
+                    {
+                    byte new_mode = (settings.gfx_mode & 0x0F) | GRAPHICS_BUFFER_TWO;
+                    setGraphicsMode(new_mode);  // Restore the graphics mode
+                    }
+                    break;
                 case '*':
                     settings.gfx_mode = '*';  // Randomize the graphics mode
                     break;

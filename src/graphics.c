@@ -24,13 +24,13 @@
 #pragma optimize(push, off)
 #pragma data-name (push,"GFX8_DL")
 #include "graphics_8_dl.h"
+#include "graphics_8_s2_dl.h"
 //#pragma data-name (pop)
 //#pragma data-name (push,"GFX8_CONSOLE_DL")
 #include "graphics_8_console_dl.h"
 //#pragma data-name (pop)
 //#pragma data-name (push,"GFX9_CONSOLE_DL")
 #include "graphics_9_console_dl.h"
-#include "graphics_8_s2_dl.h"
 #pragma data-name (pop)
 #pragma optimize(pop)
 
@@ -148,8 +148,8 @@ void setGraphicsMode(const byte mode)
             OS.sdlst = &graphics_9_console_dl;
         break;
 
-        case GRAPHICS_8 | GRAPHICS_BUFFER_TWO:
-        case GRAPHICS_9 | GRAPHICS_BUFFER_TWO:
+        case GRAPHICS_8_2:
+        case GRAPHICS_9_2:
             OS.sdlst = &graphics_8_s2_dl;
         break;
     }
@@ -189,20 +189,20 @@ void makeDisplayList(byte mode)
             dlDef.address = &graphics_8_dl;
         break;
         case GRAPHICS_8_CONSOLE:
-        case GRAPHICS_8_CONSOLE | GRAPHICS_BUFFER_TWO:  // Switch to front buffer for console
+        //case GRAPHICS_8_CONSOLE | GRAPHICS_BUFFER_TWO:  // Switch to front buffer for console
             dlDef.address = &graphics_8_console_dl;
         break;
         case GRAPHICS_9_CONSOLE:
         case GRAPHICS_10_CONSOLE:
         case GRAPHICS_11_CONSOLE:
-        case GRAPHICS_9_CONSOLE | GRAPHICS_BUFFER_TWO:  // Switch to front buffer for console
-        case GRAPHICS_10_CONSOLE | GRAPHICS_BUFFER_TWO: // Switch to front buffer for console
-        case GRAPHICS_11_CONSOLE | GRAPHICS_BUFFER_TWO: // Switch to front buffer for console
+        //case GRAPHICS_9_CONSOLE | GRAPHICS_BUFFER_TWO:  // Switch to front buffer for console
+        //case GRAPHICS_10_CONSOLE | GRAPHICS_BUFFER_TWO: // Switch to front buffer for console
+        //case GRAPHICS_11_CONSOLE | GRAPHICS_BUFFER_TWO: // Switch to front buffer for console
             dlDef.address = &graphics_9_console_dl;
         break;
-        case GRAPHICS_8 | GRAPHICS_BUFFER_TWO:
-        case GRAPHICS_9 | GRAPHICS_BUFFER_TWO:
-            OS.sdlst = &graphics_8_s2_dl;
+        case GRAPHICS_8_2:
+        case GRAPHICS_9_2:
+            dlDef.address = &graphics_8_s2_dl;
         break;
     } // switch mode
 }
