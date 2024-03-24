@@ -56,5 +56,7 @@ disk: atr
     @echo Building bootable disk
     dir2atr -E -b Dos25 -P $(PRODUCT).ATR atr
 
-debug: disk
-  Altirra64 /defprofile:xl /ntsc /burstio /fastboot /debug /debugbrkrun /debugcmd: ".loadsym $(PRODUCT).lbl" /disk $(PRODUCT).ATR
+#debug: disk
+#  Altirra64 /defprofile:xl /ntsc /burstio /fastboot /debug /debugbrkrun /debugcmd: ".loadsym $(PRODUCT).lbl" /disk $(PRODUCT).ATR
+debug: $(PRODUCT).XEX
+  Altirra64 /defprofile:xl /ntsc /burstio /fastboot /debug /debugbrkrun /debugcmd: ".loadsym $(PRODUCT).lbl" $(PRODUCT).XEX
