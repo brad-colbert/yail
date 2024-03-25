@@ -18,6 +18,9 @@ extern byte buff[];
 extern ImageData image;
 extern Settings settings;
 
+//
+static unsigned char RTCLOCK;
+
 void show_error_and_close_network(const char* message)
 {
     show_error(message);
@@ -159,10 +162,12 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
         }
         #else
         // Load data into the buffer that isn't being shown
-        if(fb)
+        #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
+        #define BUFFER_ONE_BLOCK_THREE_SIZE 640
+        #define SWAP_DISPLAY_LISTS
+        #ifdef SWAP_DISPLAY_LISTS
+        if(settings.gfx_mode & GRAPHICS_BUFFER_TWO)
         {
-            #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
-            #define BUFFER_ONE_BLOCK_THREE_SIZE 640
             if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE))
             {
                 show_error_and_close_network("Error reading\n\r");
@@ -180,8 +185,8 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
             }
         }
         else
+        #endif
         {
-            #define SWAP_DISPLAY_LISTS
             #ifdef SWAP_DISPLAY_LISTS
             #define BUFFER_TWO_BLOCK_ONE_SIZE 3440
             #define BUFFER_TWO_BLOCK_TWO_SIZE 4080
@@ -197,7 +202,6 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
                 break;
             }
             if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0xA000, BUFFER_TWO_BLOCK_THREE_SIZE))
-            //if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data+0x8280+BUFFER_TWO_BLOCK_ONE_SIZE+16, BUFFER_TWO_BLOCK_THREE_SIZE))
             {
                 show_error_and_close_network("Error reading\n\r");
                 break;
@@ -212,6 +216,7 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
         }
 
         #ifdef SWAP_DISPLAY_LISTS
+        #if 0
         // Swap buffers
         if(1 == fb)
         {
@@ -223,16 +228,23 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
             setGraphicsMode(GRAPHICS_8_2);
             fb = 1;
         }
+        #endif
+        setGraphicsMode((settings.gfx_mode & 0xEF) ^ GRAPHICS_BUFFER_TWO);
+
+        // Delay for a bit to make sure the DLs have swapped.  Waiting for the VBI to finish
+        wait_vbi();
+
+
         #else
         memcpy((void*)image.data, (void*)0x8280, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
         memcpy((void*)(image.data+0x1000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
-        memcpy((void*)(image.data+0x2000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE+16+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_THREE_SIZE);
+        memcpy((void*)(image.data+0x2000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_THREE_SIZE);
         #endif
         #endif
 
         // Wait for keypress
-        i = 0;
-        while(i++ < 100) //30000)   // roughly 5 seconds
+        //i = 0;
+        //while(i++ < 100) //30000)   // roughly 5 seconds
             if(kbhit())
             {
                 input = cgetc();
