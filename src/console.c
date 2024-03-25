@@ -112,9 +112,10 @@ char process_command(byte ntokens)
         "       server [url] (N:TCP://blah.duh/)\n\r"
         #ifdef YAIL_BUILD_FILE_LOADER
         "load - [filename] Load and display file\n\r"
-        "save - [filename] Save memory to YAI\n\r"
+        "save - [filename] Save image to YAI file\n\r";
         #else
         "stream - [arg0...argN] Stream images\n\r"
+        "video  - Stream video\n\r"
         #endif
         );
 
@@ -264,6 +265,11 @@ char process_command(byte ntokens)
 
             return stream_image(&tokens[1], 0);
         }
+    }
+
+    if(0 == strncmp(tokens[0], "video", 3))
+    {
+        return stream_image(&tokens[1], 1);
     }
 
     if(strncmp(tokens[0], "showurl", 3) == 0)

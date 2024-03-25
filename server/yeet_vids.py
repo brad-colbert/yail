@@ -157,7 +157,7 @@ def handle_client_connection(client_socket):
             tokens = r_string.rstrip(' \r\n').split(' ')
             print(tokens)
 
-            if tokens[0] == 'next' or tokens[0] == 'search':
+            if tokens[0] == 'next' or tokens[0] == 'video':
                 send_yail_data(client_socket)
 
             elif tokens[0] == 'gfx':
@@ -195,13 +195,13 @@ def camera_handler():
     WIDTH = img.get_width()
     HEIGHT = img.get_height()
 
-    screen = pygame.display.set_mode( ( WIDTH, HEIGHT ) )
-    pygame.display.set_caption("pyGame Camera View")
+    #screen = pygame.display.set_mode( ( WIDTH, HEIGHT ) )
+    #pygame.display.set_caption("pyGame Camera View")
 
     while True :
-        for e in pygame.event.get() :
-            if e.type == pygame.QUIT :
-                sys.exit()
+        #for e in pygame.event.get() :
+        #    if e.type == pygame.QUIT :
+        #        sys.exit()
 
         imgdata = pygame.surfarray.array3d(img)
         imgdata = imgdata.swapaxes(0,1)
@@ -217,8 +217,8 @@ def camera_handler():
             update_yail_data(pack_shades(gray))
 
         # draw frame
-        screen.blit(img, (0,0))
-        pygame.display.flip()
+        #screen.blit(img, (0,0))
+        #pygame.display.flip()
 
         # grab next frame    
         img = webcam.get_image()

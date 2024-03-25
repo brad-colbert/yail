@@ -18,30 +18,20 @@ extern byte buff[];
 extern ImageData image;
 extern Settings settings;
 
-//
-static unsigned char RTCLOCK;
-
 void show_error_and_close_network(const char* message)
 {
     show_error(message);
     network_close(settings.url);
 }
 
-char stream_image(char* args[], const byte STREAM_SPLASH)
+char stream_image(char* args[], const byte video)
 {
-    #if 0
-    const ushort bytes_per_line = 40;
-    const ushort lines = 220;
+    ushort i = 0;
+    char input;
+
     ushort buffer_start;
-    ushort block_size;
-    ushort lines_per_block;
-    ushort dl_block_size;
     ushort ttl_buff_size;
     ushort read_size;
-    #endif
-    ushort i;
-    char input;
-    byte fb = 0;
 
     OS.soundr = 0; // Turn off SIO beeping sound
 
@@ -90,7 +80,7 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
             strcat(buff, args[i]);
         }
     }
-    else
+    else if(args[0])
     {
         // Build up the search string
         memcpy(buff, "search \"", 8);
@@ -105,6 +95,8 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
         }
         strcat((char*)buff, "\"");
     }
+    else if(video)
+        memcpy(buff, "video", 8);
 
     i = strlen((char*)buff);
 
@@ -120,15 +112,6 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
 
     while(true)
     {
-        #if 0
-        buffer_start = (ushort)image.data;
-        block_size = DISPLAYLIST_BLOCK_SIZE;
-        lines_per_block = (ushort)(block_size/bytes_per_line);
-        dl_block_size = lines_per_block * bytes_per_line;
-        ttl_buff_size = lines * bytes_per_line;
-        read_size = dl_block_size;
-        #endif
-
         // Read the header
         if(FN_ERR_OK != network_read(settings.url, (unsigned char*)&image.header, sizeof(image.header)))
         {
@@ -136,115 +119,112 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
             break;
         }
 
-        /*
-        if((settings.gfx_mode&0x0F) != image.header.gfx)
-            setGraphicsMode(image.header.gfx);
-        else
-            setGraphicsMode(settings.gfx_mode | GRAPHICS_BUFFER_TWO);
-        */
-
         // Read the image data
         #if 0
-        while(ttl_buff_size > 0)
-        {
-            if(read_size > ttl_buff_size)
-                read_size = ttl_buff_size;
 
-            clrscr();
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)buffer_start, read_size))
-            {
-                show_error_and_close_network("Error reading\n\r");
-                break;
-            }
-
-            buffer_start = buffer_start + block_size;
-            ttl_buff_size = ttl_buff_size - read_size;
-        }
         #else
-        // Load data into the buffer that isn't being shown
-        #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
-        #define BUFFER_ONE_BLOCK_THREE_SIZE 640
-        #define SWAP_DISPLAY_LISTS
-        #ifdef SWAP_DISPLAY_LISTS
-        if(settings.gfx_mode & GRAPHICS_BUFFER_TWO)
+        if(video)
         {
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE))
-            {
-                show_error_and_close_network("Error reading\n\r");
-                break;
-            }
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data+0x1000, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE))
-            {
-                show_error_and_close_network("Error reading\n\r");
-                break;
-            }
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data+0x2000, BUFFER_ONE_BLOCK_THREE_SIZE))
-            {
-                show_error_and_close_network("Error reading\n\r");
-                break;
-            }
-        }
-        else
-        #endif
-        {
+            // Load data into the buffer that isn't being shown
+            #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
+            #define BUFFER_ONE_BLOCK_THREE_SIZE 640
+            #define SWAP_DISPLAY_LISTS
             #ifdef SWAP_DISPLAY_LISTS
-            #define BUFFER_TWO_BLOCK_ONE_SIZE 3440
-            #define BUFFER_TWO_BLOCK_TWO_SIZE 4080
-            #define BUFFER_TWO_BLOCK_THREE_SIZE 1280
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x8280, BUFFER_TWO_BLOCK_ONE_SIZE))
+            if(settings.gfx_mode & GRAPHICS_BUFFER_TWO)
             {
-                show_error_and_close_network("Error reading\n\r");
-                break;
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE))
+                {
+                    show_error_and_close_network("Error reading\n\r");
+                    break;
+                }
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data+0x1000, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE))
+                {
+                    show_error_and_close_network("Error reading\n\r");
+                    break;
+                }
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data+0x2000, BUFFER_ONE_BLOCK_THREE_SIZE))
+                {
+                    show_error_and_close_network("Error reading\n\r");
+                    break;
+                }
             }
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x9000, BUFFER_TWO_BLOCK_TWO_SIZE))
-            {
-                show_error_and_close_network("Error reading\n\r");
-                break;
-            }
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0xA000, BUFFER_TWO_BLOCK_THREE_SIZE))
-            {
-                show_error_and_close_network("Error reading\n\r");
-                break;
-            }
-            #else
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x8280, 8800))
-            {
-                show_error_and_close_network("Error reading\n\r");
-                break;
-            }
+            else
             #endif
-        }
+            {
+                #ifdef SWAP_DISPLAY_LISTS
+                #define BUFFER_TWO_BLOCK_ONE_SIZE 3440
+                #define BUFFER_TWO_BLOCK_TWO_SIZE 4080
+                #define BUFFER_TWO_BLOCK_THREE_SIZE 1280
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x8280, BUFFER_TWO_BLOCK_ONE_SIZE))
+                {
+                    show_error_and_close_network("Error reading\n\r");
+                    break;
+                }
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x9000, BUFFER_TWO_BLOCK_TWO_SIZE))
+                {
+                    show_error_and_close_network("Error reading\n\r");
+                    break;
+                }
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0xA000, BUFFER_TWO_BLOCK_THREE_SIZE))
+                {
+                    show_error_and_close_network("Error reading\n\r");
+                    break;
+                }
+                #else
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x8280, 8800))
+                {
+                    show_error_and_close_network("Error reading\n\r");
+                    break;
+                }
+                #endif
+            }
 
-        #ifdef SWAP_DISPLAY_LISTS
-        #if 0
-        // Swap buffers
-        if(1 == fb)
-        {
-            setGraphicsMode(GRAPHICS_8);
-            fb = 0;
-        }
+            #ifdef SWAP_DISPLAY_LISTS
+            setGraphicsMode((settings.gfx_mode & 0xEF) ^ GRAPHICS_BUFFER_TWO);
+
+            // Delay for a bit to make sure the DLs have swapped.  Waiting for the VBI to finish
+            wait_vbi();
+
+            #else
+            memcpy((void*)image.data, (void*)0x8280, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+            memcpy((void*)(image.data+0x1000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+            memcpy((void*)(image.data+0x2000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_THREE_SIZE);
+            #endif
+            #endif
+        } // video
         else
         {
-            setGraphicsMode(GRAPHICS_8_2);
-            fb = 1;
+            buffer_start = (ushort)image.data;
+            #define LINES_PER_BLOCK (DISPLAYLIST_BLOCK_SIZE/GFX_8_MEM_LINE)
+            #define DL_BLOCK_SIZE (LINES_PER_BLOCK * GFX_8_MEM_LINE)
+            ttl_buff_size = GFX_8_LINES * GFX_8_MEM_LINE;
+            read_size = DL_BLOCK_SIZE;
+
+            setGraphicsMode(image.header.gfx);
+
+            // Delay for a bit to make sure the DLs have swapped.  Waiting for the VBI to finish
+            wait_vbi();
+
+            while(ttl_buff_size > 0)
+            {
+                if(read_size > ttl_buff_size)
+                    read_size = ttl_buff_size;
+
+                clrscr();
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)buffer_start, read_size))
+                {
+                    show_error_and_close_network("Error reading\n\r");
+                    break;
+                }
+
+                buffer_start = buffer_start + DISPLAYLIST_BLOCK_SIZE;
+                ttl_buff_size = ttl_buff_size - read_size;
+            }            
         }
-        #endif
-        setGraphicsMode((settings.gfx_mode & 0xEF) ^ GRAPHICS_BUFFER_TWO);
-
-        // Delay for a bit to make sure the DLs have swapped.  Waiting for the VBI to finish
-        wait_vbi();
-
-
-        #else
-        memcpy((void*)image.data, (void*)0x8280, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
-        memcpy((void*)(image.data+0x1000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
-        memcpy((void*)(image.data+0x2000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_THREE_SIZE);
-        #endif
-        #endif
 
         // Wait for keypress
-        //i = 0;
-        //while(i++ < 100) //30000)   // roughly 5 seconds
+        i = 0;
+        while(i++ < 30000)   // roughly 5 seconds
             if(kbhit())
             {
                 input = cgetc();
