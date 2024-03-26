@@ -24,17 +24,74 @@ void show_error_and_close_network(const char* message)
     network_close(settings.url);
 }
 
-char stream_image(char* args[], const byte STREAM_SPLASH)
+char check_keypress(ushort delay)
 {
-    const ushort bytes_per_line = 40;
-    const ushort lines = 220;
-    ushort buffer_start;
-    ushort block_size;
-    ushort lines_per_block;
-    ushort dl_block_size;
-    ushort ttl_buff_size;
-    ushort read_size;
-    ushort i;
+    // Wait for keypress
+    char input;
+    ushort i = 0;
+    while(i++ < delay)   // roughly 5 seconds
+        if(kbhit())
+        {
+            input = cgetc();
+            if(CH_ENTER == input)   // pause
+            {
+                cgetc();            // any key to resume
+                return(0x0);
+            }
+            else  // a key was pressed so let's assume it's a command and process it by quitting and returning the key
+                show_console();
+                return input;
+        }
+
+    return 0x0;
+}
+
+byte load_front_buffer()
+{
+    #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
+    #define BUFFER_ONE_BLOCK_THREE_SIZE 640
+
+    byte status = network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+    status = network_read(settings.url, (uint8_t*)image.data+0x1000, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+    status = network_read(settings.url, (uint8_t*)image.data+0x2000, BUFFER_ONE_BLOCK_THREE_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+quit:
+    return status;
+}
+
+byte load_back_buffer()
+{
+    #define BUFFER_TWO_BLOCK_ONE_SIZE 3440
+    #define BUFFER_TWO_BLOCK_TWO_SIZE 4080
+    #define BUFFER_TWO_BLOCK_THREE_SIZE 1280
+
+    byte status = network_read(settings.url, (uint8_t*)0x8280, BUFFER_TWO_BLOCK_ONE_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+    status = network_read(settings.url, (uint8_t*)0x9000, BUFFER_TWO_BLOCK_TWO_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+    status = network_read(settings.url, (uint8_t*)0xA000, BUFFER_TWO_BLOCK_THREE_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+quit:
+    return status;
+}
+
+char stream_image(char* args[], const byte video)
+{
+    ushort i = 0;
     char input;
 
     OS.soundr = 0; // Turn off SIO beeping sound
@@ -70,40 +127,37 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
     }
 
     memset(buff, 0, 256);
-    if(0 == STREAM_SPLASH)
+    if(0 == strncmp(args[0], "http", 4))
     {
-        if(0 == strncmp(args[0], "http", 4))
+        // Build up the search string
+        memcpy(buff, "showurl ", 8);
+        for(i = 0; i < 8; ++i)
         {
-            // Build up the search string
-            memcpy(buff, "showurl ", 8);
-            for(i = 0; i < 8; ++i)
-            {
-                if(0x0 == args[i])
-                    break;
+            if(0x0 == args[i])
+                break;
 
-                if(i > 0)
-                    strcat(buff, " ");
-                strcat(buff, args[i]);
-            }
-        }
-        else
-        {
-            // Build up the search string
-            memcpy(buff, "search \"", 8);
-            for(i = 0; i < 8; ++i)
-            {
-                if(0x0 == args[i])
-                    break;
-
-                if(i > 0)
-                    strcat((char*)buff, " ");
-                strcat((char*)buff, args[i]);
-            }
-            strcat((char*)buff, "\"");
+            if(i > 0)
+                strcat(buff, " ");
+            strcat(buff, args[i]);
         }
     }
-    else
-        strcat((char*)buff, "splash");
+    else if(args[0])
+    {
+        // Build up the search string
+        memcpy(buff, "search \"", 8);
+        for(i = 0; i < 8; ++i)
+        {
+            if(0x0 == args[i])
+                break;
+
+            if(i > 0)
+                strcat((char*)buff, " ");
+            strcat((char*)buff, args[i]);
+        }
+        strcat((char*)buff, "\"");
+    }
+    else if(video)
+        memcpy(buff, "video", 8);
 
     i = strlen((char*)buff);
 
@@ -113,19 +167,12 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
         return 0x0;
     }
 
-    // We are starting streaming so remove the attract mode disbale VBI becasue we will
+    // We are starting streaming so remove the attract mode disable VBI because we will
     // disable attract mode ourselves.
     remove_attract_disable_vbi();
 
     while(true)
     {
-        buffer_start = (ushort)image.data;
-        block_size = DISPLAYLIST_BLOCK_SIZE;
-        lines_per_block = (ushort)(block_size/bytes_per_line);
-        dl_block_size = lines_per_block * bytes_per_line;
-        ttl_buff_size = lines * bytes_per_line;
-        read_size = dl_block_size;
-
         // Read the header
         if(FN_ERR_OK != network_read(settings.url, (unsigned char*)&image.header, sizeof(image.header)))
         {
@@ -133,46 +180,72 @@ char stream_image(char* args[], const byte STREAM_SPLASH)
             break;
         }
 
-        setGraphicsMode(image.header.gfx);
-
-        while(ttl_buff_size > 0)
+        // Read the image data
+        if(video)
         {
-            if(read_size > ttl_buff_size)
-                read_size = ttl_buff_size;
-
-            clrscr();
-            if(FN_ERR_OK != network_read(settings.url, (uint8_t*)buffer_start, read_size))
+            // Load data into the buffer that isn't being shown
+            #define SWAP_DISPLAY_LISTS
+            #ifdef SWAP_DISPLAY_LISTS
+            if(settings.gfx_mode & GRAPHICS_BUFFER_TWO)
             {
-                show_error_and_close_network("Error reading\n\r");
+                if(FN_ERR_OK != load_front_buffer())
+                {
+                    show_error_and_close_network("Error reading front buffer\n\r");
+                    break;
+                }
+            }
+            else
+            #endif
+            {
+                #ifdef SWAP_DISPLAY_LISTS
+                if(FN_ERR_OK != load_back_buffer())
+                {
+                    show_error_and_close_network("Error reading back buffer\n\r");
+                    break;
+                }
+                #else
+                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x8280, 8800))
+                {
+                    show_error_and_close_network("Error reading\n\r");
+                    break;
+                }
+                #endif
+            }
+
+            #ifdef SWAP_DISPLAY_LISTS
+            setGraphicsMode((settings.gfx_mode & 0xEF) ^ GRAPHICS_BUFFER_TWO);
+
+            // Delay for a bit to make sure the DLs have swapped.  Waiting for the VBI to finish
+            wait_vbi();
+
+            #else
+            #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
+            #define BUFFER_ONE_BLOCK_THREE_SIZE 640
+            memcpy((void*)image.data, (void*)0x8280, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+            memcpy((void*)(image.data+0x1000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+            memcpy((void*)(image.data+0x2000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_THREE_SIZE);
+            #endif
+
+            input = check_keypress(2);
+            if(input)
+            {
+                setGraphicsMode((settings.gfx_mode & 0xDF) | GRAPHICS_CONSOLE_EN); // Switch back to the front buffer
+                goto quit;
+            }
+
+        } // video
+        else
+        {
+            if(FN_ERR_OK != load_front_buffer())
+            {
+                show_error_and_close_network("Error reading front buffer\n\r");
                 break;
             }
 
-            buffer_start = buffer_start + block_size;
-            ttl_buff_size = ttl_buff_size - read_size;
+            input = check_keypress(30000);
+            if(input)
+                goto quit;
         }
-
-        // Wait for keypress
-        if(0 == STREAM_SPLASH)
-        {
-            i = 0;
-            while(i++ < 30000)   // roughly 5 seconds
-                if(kbhit())
-                {
-                    input = cgetc();
-                    if(CH_ENTER == input)   // pause
-                    {
-                        cgetc();            // any key to resume
-                        input = 0x0;
-                    }
-                    else  // a key was pressed so let's assume it's a command and process it by quitting and returning the key
-                    {
-                        show_console();
-                        goto quit;
-                    }
-                }
-        }
-        else
-            goto quit;
 
         if(FN_ERR_OK != network_write(settings.url, (uint8_t*)"next", 4))
         {

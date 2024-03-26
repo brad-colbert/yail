@@ -87,7 +87,7 @@ uint8_t get_settings()
             setGraphicsMode(DEFAULT_GFX_MODE);   
         }
         else
-            setGraphicsMode(((byte*)data.read.value)[0]);
+            setGraphicsMode(((byte*)data.read.value)[0]); // for a test  | GRAPHICS_BUFFER_TWO);
     }
     else // use default
         setGraphicsMode(DEFAULT_GFX_MODE);

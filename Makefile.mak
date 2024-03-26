@@ -8,7 +8,7 @@ TARGET=atari
 SRC_DIR=src
 #CFLAGS=-Osri
 CFLAGS=-Os
-LINKFLAGS=
+LINKFLAGS=-D__SYSTEM_CHECK__=1
 #LINKFLAGS=--debug-info -Wl --dbgfile,"myapp.dbg"
 # -D__SYSTEM_CHECK__=1
 LIBRARIES=fujinet-lib/fujinet-atari-2.2.1.lib
@@ -56,5 +56,7 @@ disk: atr
     @echo Building bootable disk
     dir2atr -E -b Dos25 -P $(PRODUCT).ATR atr
 
-debug: disk
-  Altirra64 /defprofile:xl /ntsc /burstio /fastboot /debug /debugbrkrun /debugcmd: ".loadsym $(PRODUCT).lbl" /disk $(PRODUCT).ATR
+#debug: disk
+#  Altirra64 /defprofile:xl /ntsc /burstio /fastboot /debug /debugbrkrun /debugcmd: ".loadsym $(PRODUCT).lbl" /disk $(PRODUCT).ATR
+debug: $(PRODUCT).XEX
+  Altirra64 /defprofile:xl /ntsc /burstio /fastboot /debug /debugbrkrun /debugcmd: ".loadsym $(PRODUCT).lbl" $(PRODUCT).XEX
