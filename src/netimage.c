@@ -93,6 +93,7 @@ char stream_image(char* args[], const byte video)
 {
     ushort i = 0;
     char input;
+    byte fb = 0;
 
     OS.soundr = 0; // Turn off SIO beeping sound
 
@@ -135,6 +136,14 @@ char stream_image(char* args[], const byte video)
         {
             if(0x0 == args[i])
                 break;
+    if(0 == strncmp(args[0], "http", 4))
+    {
+        // Build up the search string
+        memcpy(buff, "showurl ", 8);
+        for(i = 0; i < 8; ++i)
+        {
+            if(0x0 == args[i])
+                break;
 
             if(i > 0)
                 strcat(buff, " ");
@@ -168,8 +177,9 @@ char stream_image(char* args[], const byte video)
     }
 
     // We are starting streaming so remove the attract mode disable VBI because we will
+    // We are starting streaming so remove the attract mode disable VBI because we will
     // disable attract mode ourselves.
-    remove_attract_disable_vbi();
+    //remove_attract_disable_vbi();
 
     while(true)
     {
@@ -265,7 +275,7 @@ quit:
     OS.soundr = 3; // Restore SIO beeping sound
 
     // We are no longer streaming so disable attract mode with a VBI
-    add_attract_disable_vbi();
+    //add_attract_disable_vbi();
 
     return input;
 }
