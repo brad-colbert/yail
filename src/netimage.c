@@ -24,14 +24,75 @@ void show_error_and_close_network(const char* message)
     network_close(settings.url);
 }
 
+char check_keypress(ushort delay)
+{
+    // Wait for keypress
+    char input;
+    ushort i = 0;
+    while(i++ < delay)   // roughly 5 seconds
+        if(kbhit())
+        {
+            input = cgetc();
+            if(CH_ENTER == input)   // pause
+            {
+                cgetc();            // any key to resume
+                return(0x0);
+            }
+            else  // a key was pressed so let's assume it's a command and process it by quitting and returning the key
+                show_console();
+                return input;
+        }
+
+    return 0x0;
+}
+
+byte load_front_buffer()
+{
+    #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
+    #define BUFFER_ONE_BLOCK_THREE_SIZE 640
+
+    byte status = network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+    status = network_read(settings.url, (uint8_t*)image.data+0x1000, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+    status = network_read(settings.url, (uint8_t*)image.data+0x2000, BUFFER_ONE_BLOCK_THREE_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+quit:
+    return status;
+}
+
+byte load_back_buffer()
+{
+    #define BUFFER_TWO_BLOCK_ONE_SIZE 3440
+    #define BUFFER_TWO_BLOCK_TWO_SIZE 4080
+    #define BUFFER_TWO_BLOCK_THREE_SIZE 1280
+
+    byte status = network_read(settings.url, (uint8_t*)0x8280, BUFFER_TWO_BLOCK_ONE_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+    status = network_read(settings.url, (uint8_t*)0x9000, BUFFER_TWO_BLOCK_TWO_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+    status = network_read(settings.url, (uint8_t*)0xA000, BUFFER_TWO_BLOCK_THREE_SIZE);
+    if(FN_ERR_OK != status)
+        goto quit;
+
+quit:
+    return status;
+}
+
 char stream_image(char* args[], const byte video)
 {
     ushort i = 0;
     char input;
-
-    ushort buffer_start;
-    ushort ttl_buff_size;
-    ushort read_size;
 
     OS.soundr = 0; // Turn off SIO beeping sound
 
@@ -108,7 +169,7 @@ char stream_image(char* args[], const byte video)
 
     // We are starting streaming so remove the attract mode disable VBI because we will
     // disable attract mode ourselves.
-    //remove_attract_disable_vbi();
+    remove_attract_disable_vbi();
 
     while(true)
     {
@@ -120,31 +181,16 @@ char stream_image(char* args[], const byte video)
         }
 
         // Read the image data
-        #if 0
-
-        #else
         if(video)
         {
             // Load data into the buffer that isn't being shown
-            #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
-            #define BUFFER_ONE_BLOCK_THREE_SIZE 640
             #define SWAP_DISPLAY_LISTS
             #ifdef SWAP_DISPLAY_LISTS
             if(settings.gfx_mode & GRAPHICS_BUFFER_TWO)
             {
-                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE))
+                if(FN_ERR_OK != load_front_buffer())
                 {
-                    show_error_and_close_network("Error reading\n\r");
-                    break;
-                }
-                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data+0x1000, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE))
-                {
-                    show_error_and_close_network("Error reading\n\r");
-                    break;
-                }
-                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)image.data+0x2000, BUFFER_ONE_BLOCK_THREE_SIZE))
-                {
-                    show_error_and_close_network("Error reading\n\r");
+                    show_error_and_close_network("Error reading front buffer\n\r");
                     break;
                 }
             }
@@ -152,22 +198,9 @@ char stream_image(char* args[], const byte video)
             #endif
             {
                 #ifdef SWAP_DISPLAY_LISTS
-                #define BUFFER_TWO_BLOCK_ONE_SIZE 3440
-                #define BUFFER_TWO_BLOCK_TWO_SIZE 4080
-                #define BUFFER_TWO_BLOCK_THREE_SIZE 1280
-                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x8280, BUFFER_TWO_BLOCK_ONE_SIZE))
+                if(FN_ERR_OK != load_back_buffer())
                 {
-                    show_error_and_close_network("Error reading\n\r");
-                    break;
-                }
-                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x9000, BUFFER_TWO_BLOCK_TWO_SIZE))
-                {
-                    show_error_and_close_network("Error reading\n\r");
-                    break;
-                }
-                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0xA000, BUFFER_TWO_BLOCK_THREE_SIZE))
-                {
-                    show_error_and_close_network("Error reading\n\r");
+                    show_error_and_close_network("Error reading back buffer\n\r");
                     break;
                 }
                 #else
@@ -186,59 +219,30 @@ char stream_image(char* args[], const byte video)
             wait_vbi();
 
             #else
+            #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
+            #define BUFFER_ONE_BLOCK_THREE_SIZE 640
             memcpy((void*)image.data, (void*)0x8280, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
             memcpy((void*)(image.data+0x1000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
             memcpy((void*)(image.data+0x2000), (void*)(0x8280+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE+BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE), BUFFER_ONE_BLOCK_THREE_SIZE);
             #endif
-            #endif
+
+            input = check_keypress(2);
+            if(input)
+                goto quit;
+
         } // video
         else
         {
-            buffer_start = (ushort)image.data;
-            #define LINES_PER_BLOCK (DISPLAYLIST_BLOCK_SIZE/GFX_8_MEM_LINE)
-            #define DL_BLOCK_SIZE (LINES_PER_BLOCK * GFX_8_MEM_LINE)
-            ttl_buff_size = GFX_8_LINES * GFX_8_MEM_LINE;
-            read_size = DL_BLOCK_SIZE;
-
-            setGraphicsMode(image.header.gfx);
-
-            // Delay for a bit to make sure the DLs have swapped.  Waiting for the VBI to finish
-            wait_vbi();
-
-            while(ttl_buff_size > 0)
+            if(FN_ERR_OK != load_front_buffer())
             {
-                if(read_size > ttl_buff_size)
-                    read_size = ttl_buff_size;
-
-                clrscr();
-                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)buffer_start, read_size))
-                {
-                    show_error_and_close_network("Error reading\n\r");
-                    break;
-                }
-
-                buffer_start = buffer_start + DISPLAYLIST_BLOCK_SIZE;
-                ttl_buff_size = ttl_buff_size - read_size;
-            }            
-        }
-
-        // Wait for keypress
-        i = 0;
-        while(i++ < 30000)   // roughly 5 seconds
-            if(kbhit())
-            {
-                input = cgetc();
-                if(CH_ENTER == input)   // pause
-                {
-                    cgetc();            // any key to resume
-                    input = 0x0;
-                }
-                else  // a key was pressed so let's assume it's a command and process it by quitting and returning the key
-                {
-                    show_console();
-                    goto quit;
-                }
+                show_error_and_close_network("Error reading front buffer\n\r");
+                break;
             }
+
+            input = check_keypress(30000);
+            if(input)
+                goto quit;
+        }
 
         if(FN_ERR_OK != network_write(settings.url, (uint8_t*)"next", 4))
         {
@@ -258,7 +262,7 @@ quit:
     OS.soundr = 3; // Restore SIO beeping sound
 
     // We are no longer streaming so disable attract mode with a VBI
-    //add_attract_disable_vbi();
+    add_attract_disable_vbi();
 
     return input;
 }
