@@ -228,7 +228,10 @@ char stream_image(char* args[], const byte video)
 
             input = check_keypress(2);
             if(input)
+            {
+                setGraphicsMode((settings.gfx_mode & 0xDF) | GRAPHICS_CONSOLE_EN); // Switch back to the front buffer
                 goto quit;
+            }
 
         } // video
         else
