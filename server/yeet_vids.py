@@ -18,17 +18,17 @@ import sys
 logging.basicConfig(level=logging.ERROR)
 logger = logging.getLogger(__name__)
 
-# The yail_data will contain the image that is to be sent.  It
-# is protected with a Mutex so that when the image is being sent
-# it won't be written by the server.
-mutex = Lock()
-yail_data = None
-
 GRAPHICS_8 = 2
 GRAPHICS_9 = 4
 GRAPHICS_RANDOM = 42
 YAIL_W = 320
 YAIL_H = 220
+
+# The yail_data will contain the image that is to be sent.  It
+# is protected with a Mutex so that when the image is being sent
+# it won't be written by the server.
+mutex = Lock()
+yail_data = None
 
 gfx_mode = GRAPHICS_8
 connections = 0
@@ -351,11 +351,10 @@ def main():
 
     bind_ip = '0.0.0.0'
     bind_port = 5556
-    connections = 0
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server.bind((bind_ip, bind_port))
-    server.listen(5)  # max backlog of connections
+    server.listen(10)  # max backlog of connections
 
     logger.info('Listening on {}:{}'.format(bind_ip, bind_port))
 
