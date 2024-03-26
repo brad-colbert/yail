@@ -4,6 +4,7 @@
 #include "console.h"
 #include "readNetPBM.h"
 #include "graphics.h"
+#include "settings.h"
 #include "version.h"
 #include "utility.h"
 
@@ -17,8 +18,9 @@
 // externals
 extern ImageData image;
 extern byte buff[];
-extern byte CURRENT_MODE;
+//extern byte CURRENT_MODE;
 extern void graphics_9_console_dl;
+extern Settings settings;
 
 // returns a token based on the filetype determined from the extension
 byte imageFileType(const char filename[])
@@ -77,7 +79,7 @@ void saveFile(const char filename[])
         write(fd, &b, 1);
 
         // Write the graphics mode
-        b = CURRENT_MODE & ~GRAPHICS_CONSOLE_EN;
+        b = settings.gfx_mode & ~GRAPHICS_CONSOLE_EN;
         write(fd, &b, 1);
 
         // Write the DLs

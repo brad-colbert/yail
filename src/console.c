@@ -112,7 +112,7 @@ char process_command(byte ntokens)
         "       server [url] (N:TCP://blah.duh/)\n\r"
         #ifdef YAIL_BUILD_FILE_LOADER
         "load - [filename] Load and display file\n\r"
-        "save - [filename] Save memory to YAI\n\r";
+        "save - [filename] Save memory to YAI\n\r"
         #else
         "stream - [arg0...argN] Stream images\n\r"
         #endif
