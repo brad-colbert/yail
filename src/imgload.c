@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 
         // Stop the attract mode
         ORIG_VBII_SAVE = OS.vvblki;
-        //add_attract_disable_vbi();
+        add_attract_disable_vbi();
 
         while(!done)
         {

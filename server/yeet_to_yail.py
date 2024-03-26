@@ -286,6 +286,7 @@ def handle_client_connection(client_socket):
             if tokens[0] == 'video':
                 client_mode = 'video'
                 if camera_thread is None:
+                    camera_done = False
                     camera_thread = Thread(target=camera_handler)
                     camera_thread.daemon = True
                     camera_thread.start()
