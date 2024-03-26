@@ -230,13 +230,13 @@ def camera_handler():
     WIDTH = img.get_width()
     HEIGHT = img.get_height()
 
-    screen = pygame.display.set_mode( ( WIDTH, HEIGHT ) )
-    pygame.display.set_caption("pyGame Camera View")
+    #screen = pygame.display.set_mode( ( WIDTH, HEIGHT ) )
+    #pygame.display.set_caption("pyGame Camera View")
 
     while not camera_done:
-        for e in pygame.event.get() :
-            if e.type == pygame.QUIT :
-                sys.exit()
+        #for e in pygame.event.get() :
+        #    if e.type == pygame.QUIT :
+        #        sys.exit()
 
         imgdata = pygame.surfarray.array3d(img)
         imgdata = imgdata.swapaxes(0,1)
@@ -252,8 +252,8 @@ def camera_handler():
             update_yail_data(pack_shades(gray))
 
         # draw frame
-        screen.blit(img, (0,0))
-        pygame.display.flip()
+        #screen.blit(img, (0,0))
+        #pygame.display.flip()
 
         # grab next frame    
         img = webcam.get_image()
