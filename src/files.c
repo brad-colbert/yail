@@ -67,7 +67,6 @@ void saveFile(const char filename[])
 
     if(fd >= 0)
     {
-        size_t size = 0;
         byte b;
 
         // Write the version
@@ -83,28 +82,26 @@ void saveFile(const char filename[])
         write(fd, &b, 1);
 
         // Write the DLs
+        #define IMAGE_DL_SIZE 199
         b = DL_TOKEN;
         write(fd, &b, 1);
         write(fd, &OS.sdlst, sizeof(unsigned));
-        size = 199;
-        write(fd, OS.sdlst, size);
+        write(fd, OS.sdlst, 199);
 
-        {
-            size = 4080;
-            b = MEM_TOKEN;
-            write(fd, &b, 1);
-            write(fd, &size, sizeof(size_t));
-            write(fd, image.data, size);
+        #define IMAGE_BLOCK_ONE_TWO_SIZE 4080
+        #define IMAGE_BLOCK_THREE_SIZE 640
+        b = MEM_TOKEN;
+        write(fd, &b, 1);
+        write(fd, &size, sizeof(size_t));
+        write(fd, image.data, IMAGE_BLOCK_ONE_TWO_SIZE);
 
-            write(fd, &b, 1);
-            write(fd, &size, sizeof(size_t));
-            write(fd, (image.data+0x1000), size);
+        write(fd, &b, 1);
+        write(fd, &size, sizeof(size_t));
+        write(fd, (image.data+0x1000), IMAGE_BLOCK_ONE_TWO_SIZE);
 
-            size = 640;
-            write(fd, &b, 1);
-            write(fd, &size, sizeof(size_t));
-            write(fd, (image.data+0x1000), size);
-        }
+        write(fd, &b, 1);
+        write(fd, &size, sizeof(size_t));
+        write(fd, (image.data+0x2000), IMAGE_BLOCK_THREE_SIZE);
 
         //
         close(fd);

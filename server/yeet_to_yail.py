@@ -1,3 +1,6 @@
+import os
+import argparse
+from typing import List, Union, Callable
 import requests
 import re
 import time
@@ -34,6 +37,7 @@ gfx_mode = GRAPHICS_8
 connections = 0
 camera_thread = None
 camera_done = False
+filenames = []
 
 def fix_aspect(image, crop=False):
     aspect = YAIL_W/YAIL_H   # YAIL aspect ratio
@@ -141,40 +145,44 @@ def send_yail_data(client_socket, thread_safe=True):
         client_socket.sendall(data)
         logger.info('Sent YAIL data')
 
-def stream_YAI(url, client, gfx_mode):
+def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None):  #url, client, gfx_mode):
     from io import BytesIO
 
     # download the body of response by chunk, not immediately
     try:
-        logger.info('Loading', url, url.encode())
+        if url is not None:
+            logger.info('Loading', url, url.encode())
 
-        file_size = 0
+            file_size = 0
 
-        response = requests.get(url, stream=True, timeout=30)
+            response = requests.get(url, stream=True, timeout=30)
 
-        # get the file name
-        filepath = ''
-        exts = ['.jpg', '.jpeg', '.gif', '.png']
-        ext = re.findall('|'.join(exts), url)
-        if len(ext):
-            pos_ext = url.find(ext[0])
-            if pos_ext >= 0:
-                pos_name = url.rfind("/", 0, pos_ext)
-                filepath =  url[pos_name+1:pos_ext+4]
+            # get the file name
+            filepath = ''
+            exts = ['.jpg', '.jpeg', '.gif', '.png']
+            ext = re.findall('|'.join(exts), url)
+            if len(ext):
+                pos_ext = url.find(ext[0])
+                if pos_ext >= 0:
+                    pos_name = url.rfind("/", 0, pos_ext)
+                    filepath =  url[pos_name+1:pos_ext+4]
 
-        # progress bar, changing the unit to bytes instead of iteration (default by tqdm)
-        image_data = b''
-        progress = tqdm(response.iter_content(1024), f"Downloading {filepath}", total=file_size, unit="B", unit_scale=True, unit_divisor=1024)
-        for data in progress:
-            # collect all the data
-            image_data += data
+            # progress bar, changing the unit to bytes instead of iteration (default by tqdm)
+            image_data = b''
+            progress = tqdm(response.iter_content(1024), f"Downloading {filepath}", total=file_size, unit="B", unit_scale=True, unit_divisor=1024)
+            for data in progress:
+                # collect all the data
+                image_data += data
 
-            # update the progress bar manually
-            progress.update(len(data))
+                # update the progress bar manually
+                progress.update(len(data))
 
-        image_bytes_io = BytesIO()
-        image_bytes_io.write(image_data)
-        image = Image.open(image_bytes_io)
+            image_bytes_io = BytesIO()
+            image_bytes_io.write(image_data)
+            image = Image.open(image_bytes_io)
+
+        elif filepath is not None:
+            image = Image.open(filepath)
 
         gray = image.convert(mode='L')
         gray = fix_aspect(gray)
@@ -212,6 +220,8 @@ def camera_handler():
     import pygame.camera
     import pygame.image
 
+    SHOW_WEBCAM_VIEW = False
+
     global camera_done
 
     pygame.camera.init()
@@ -230,13 +240,15 @@ def camera_handler():
     WIDTH = img.get_width()
     HEIGHT = img.get_height()
 
-    #screen = pygame.display.set_mode( ( WIDTH, HEIGHT ) )
-    #pygame.display.set_caption("pyGame Camera View")
+    if SHOW_WEBCAM_VIEW:
+        screen = pygame.display.set_mode( ( WIDTH, HEIGHT ) )
+        pygame.display.set_caption("pyGame Camera View")
 
     while not camera_done:
-        #for e in pygame.event.get() :
-        #    if e.type == pygame.QUIT :
-        #        sys.exit()
+        if SHOW_WEBCAM_VIEW:
+            for e in pygame.event.get() :
+                if e.type == pygame.QUIT :
+                    sys.exit()
 
         imgdata = pygame.surfarray.array3d(img)
         imgdata = imgdata.swapaxes(0,1)
@@ -252,8 +264,9 @@ def camera_handler():
             update_yail_data(pack_shades(gray))
 
         # draw frame
-        #screen.blit(img, (0,0))
-        #pygame.display.flip()
+        if SHOW_WEBCAM_VIEW:
+            screen.blit(img, (0,0))
+            pygame.display.flip()
 
         # grab next frame    
         img = webcam.get_image()
@@ -298,26 +311,57 @@ def handle_client_connection(client_socket):
                 urls = search_images(' '.join(tokens[1:]))
                 url_idx = random.randint(0, len(urls)-1)
                 url = urls[url_idx]
-                while not stream_YAI(url, client_socket, gfx_mode):
-                    logger.warning(f'Problem with %s trying another...', url)
-                    url_idx = random.randint(0, len(urls)-1)
-                    url = urls[url_idx]
-                    time.sleep(1)
-                tokens = []
-
-            elif tokens[0] == 'next':
-                if client_mode == 'search':
-                    url_idx = random.randint(0, len(urls)-1)
-                    url = urls[url_idx]
+                if url:
                     # Loop if we have a problem with the image, selecting the next.
-                    while not stream_YAI(url, client_socket, gfx_mode):
-                        logger.warning('Problem with image trying another...')
+                    while not stream_YAI(client_socket, gfx_mode, url=url):
+                        logger.warning(f'Problem with %s trying another...', url)
                         url_idx = random.randint(0, len(urls)-1)
                         url = urls[url_idx]
                         time.sleep(1)
+                tokens = []
+
+            elif tokens[0] == 'files':
+                client_mode = 'files'
+                if len(filenames) > 0:
+                    file_idx = random.randint(0, len(filenames)-1)
+                    filename = filenames[file_idx]
+                    if filename:
+                        # Loop if we have a problem with the image, selecting the next.
+                        while not stream_YAI(client_socket, gfx_mode, filepath=filename):
+                            logger.warning(f'Problem with %s trying another...', filename)
+                            file_idx = random.randint(0, len(filenames)-1)
+                            filename = filenames[file_idx]
+                            time.sleep(1)
+                tokens.pop(0)
+
+            elif tokens[0] == 'next':
+                if client_mode == 'search':
+                    url = None
+                    url_idx = random.randint(0, len(urls)-1)
+                    url = urls[url_idx]
+                    if url:
+                        # Loop if we have a problem with the image, selecting the next.
+                        while not stream_YAI(client_socket, gfx_mode, url=url):
+                            logger.warning('Problem with image trying another...')
+                            url_idx = random.randint(0, len(urls)-1)
+                            url = urls[url_idx]
+                            time.sleep(1)
                     tokens.pop(0)
                 elif client_mode == 'video':
                     send_yail_data(client_socket)
+                    tokens.pop(0)
+                elif client_mode == 'files':
+                    filename = None
+                    if len(filenames) > 0:
+                        file_idx = random.randint(0, len(filenames)-1)
+                        filename = filenames[file_idx]
+                        if filename:
+                            # Loop if we have a problem with the image, selecting the next.
+                            while not stream_YAI(client_socket, gfx_mode, filepath=filename):
+                                logger.warning(f'Problem with %s trying another...', filename)
+                                file_idx = random.randint(0, len(filenames)-1)
+                                filename = filenames[file_idx]
+                                time.sleep(1)
                     tokens.pop(0)
 
             elif tokens[0] == 'gfx':
@@ -345,6 +389,31 @@ def handle_client_connection(client_socket):
             time.sleep(1)
             camera_thread = None
 
+def process_files(input_path: Union[str, List[str]], 
+                  extensions: List[str], 
+                  F: Callable[[str], None]) -> None:
+    extensions = [ext.lower() if ext.startswith('.') else f'.{ext.lower()}' for ext in extensions]
+
+    def process_file(file_path: str):
+        _, ext = os.path.splitext(file_path)
+        if ext.lower() in extensions:
+            F(file_path)
+
+    if isinstance(input_path, list):
+        for file_path in input_path:
+            process_file(file_path)
+    elif os.path.isdir(input_path):
+        for root, _, files in os.walk(input_path):
+            for file in files:
+                process_file(os.path.join(root, file))
+    else:
+        raise ValueError("input_path must be a directory path or a list of file paths.")
+
+def F(file_path):
+    global filenames
+    logger.info(f"Processing file: {file_path}")
+    filenames.append(file_path)
+
 def main():
     # Initialize the image to send with something
     initial_image = Image.new("L", (YAIL_W,YAIL_H))
@@ -358,6 +427,31 @@ def main():
     server.listen(10)  # max backlog of connections
 
     logger.info('Listening on {}:{}'.format(bind_ip, bind_port))
+
+    # Check if any arguments were provided (other than the script name)
+    if len(sys.argv) > 1:
+        parser = argparse.ArgumentParser(description="Yeets images to YAIL")
+        parser.add_argument('paths', nargs='+', default=None, help='Directory path or list of file paths')
+        parser.add_argument('--extensions', nargs='+', default=['.jpg', '.jpeg', '.gif', '.png'], help='List of file extensions to process')
+        parser.add_argument('--mode', nargs='+', default='9', help='List of file extensions to process')
+        
+        args = parser.parse_args()
+
+        if args.mode == '8':
+            gfx_mode = GRAPHICS_8
+        elif args.mode == '9':
+            gfx_mode = GRAPHICS_9
+        
+        if len(args.paths) == 1 and os.path.isdir(args.paths[0]):
+            # If a single argument is passed and it's a directory
+            directory_path = args.paths[0]
+            print("Processing files in directory:")
+            process_files(directory_path, args.extensions, F)
+        else:
+            # If multiple file paths are passed
+            file_list = args.paths
+            print("\nProcessing specific files in list:")
+            process_files(file_list, args.extensions, F)
 
     while True:
         client_sock, address = server.accept()
