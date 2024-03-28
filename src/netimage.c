@@ -144,7 +144,7 @@ char stream_image(char* args[], const byte video)
     else if(args[0])
     {
         // Build up the search string
-        memcpy(buff, "search \"", 8);
+        memcpy(buff, "search", 6);
         for(i = 0; i < 8; ++i)
         {
             if(0x0 == args[i])
@@ -152,12 +152,17 @@ char stream_image(char* args[], const byte video)
 
             if(i > 0)
                 strcat((char*)buff, " ");
+            else
+                strcat((char*)buff, " \"");
             strcat((char*)buff, args[i]);
         }
-        strcat((char*)buff, "\"");
+        if(i > 0)
+            strcat((char*)buff, "\"");
     }
     else if(video)
-        memcpy(buff, "video", 8);
+        memcpy(buff, "video", 5);
+    else  // now search terms provided so just stream files from the server
+        memcpy(buff, "files", 5);
 
     i = strlen((char*)buff);
 

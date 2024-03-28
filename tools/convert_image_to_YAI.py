@@ -156,30 +156,36 @@ def F(file_path):
         print(e)
 
 def main():
+    import sys
     global gfx_mode
 
-    parser = argparse.ArgumentParser(description="Process some files.")
-    parser.add_argument('paths', nargs='+', help='Directory path or list of file paths')
-    parser.add_argument('--extensions', nargs='+', default=['.jpg', '.jpeg', '.gif', '.png'], help='List of file extensions to process')
-    parser.add_argument('--mode', nargs='+', default='9', help='List of file extensions to process')
-    
-    args = parser.parse_args()
+    # Check if any arguments were provided (other than the script name)
+    if len(sys.argv) > 1:
 
-    if args.mode == '8':
-        gfx_mode = GRAPHICS_8
-    elif args.mode == '9':
-        gfx_mode = GRAPHICS_9
-    
-    if len(args.paths) == 1 and os.path.isdir(args.paths[0]):
-        # If a single argument is passed and it's a directory
-        directory_path = args.paths[0]
-        print("Processing files in directory:")
-        process_files(directory_path, args.extensions, F)
+        parser = argparse.ArgumentParser(description="Process some files.")
+        parser.add_argument('paths', nargs='+', help='Directory path or list of file paths')
+        parser.add_argument('--extensions', nargs='+', default=['.jpg', '.jpeg', '.gif', '.png'], help='List of file extensions to process')
+        parser.add_argument('--mode', nargs='+', default='9', help='8 or 9')
+        
+        args = parser.parse_args()
+
+        if args.mode == '8':
+            gfx_mode = GRAPHICS_8
+        elif args.mode == '9':
+            gfx_mode = GRAPHICS_9
+        
+        if len(args.paths) == 1 and os.path.isdir(args.paths[0]):
+            # If a single argument is passed and it's a directory
+            directory_path = args.paths[0]
+            print("Processing files in directory:")
+            process_files(directory_path, args.extensions, F)
+        else:
+            # If multiple file paths are passed
+            file_list = args.paths
+            print("\nProcessing specific files in list:")
+            process_files(file_list, args.extensions, F)
     else:
-        # If multiple file paths are passed
-        file_list = args.paths
-        print("\nProcessing specific files in list:")
-        process_files(file_list, args.extensions, F)
+        print("No arguments provided. Exiting...")
 
 if __name__ == "__main__":
     main()

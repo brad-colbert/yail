@@ -247,11 +247,13 @@ char process_command(byte ntokens)
 
     if(0 == strncmp(tokens[0], "stream", 3))
     {
+        /*
         if(ntokens < 2)
         {
             gotoxy(0,0);
             cputs("ERROR: Search tokens not specified");
             cgetc();
+            //return stream_image(&tokens[1], 0);
         }
         else
         {
@@ -265,6 +267,8 @@ char process_command(byte ntokens)
 
             return stream_image(&tokens[1], 0);
         }
+        */
+        return stream_image(&tokens[1], 0);
     }
 
     if(0 == strncmp(tokens[0], "video", 3))
