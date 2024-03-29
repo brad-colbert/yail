@@ -18,7 +18,7 @@ import numpy as np
 import sys
 
 # Set up logging first thing
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger(__name__)
 
 GRAPHICS_8 = 2
@@ -38,6 +38,7 @@ connections = 0
 camera_thread = None
 camera_done = False
 filenames = []
+camera_name = None
 
 def fix_aspect(image, crop=False):
     aspect = YAIL_W/YAIL_H   # YAIL aspect ratio
@@ -226,13 +227,23 @@ def camera_handler():
 
     pygame.camera.init()
 
-    cameras = pygame.camera.list_cameras()
+    if camera_name is not None:
+        webcam = pygame.camera.Camera(camera_name)
 
-    logger.info("Using camera %s ..." % cameras[0])
+        webcam.start()
+    else:
+        cameras = pygame.camera.list_cameras()
 
-    webcam = pygame.camera.Camera(cameras[0])
+        # going to try each camera in the list until we have one
+        for camera in cameras:
+            try:
+                logger.info("Trying camera %s ..." % camera)
 
-    webcam.start()
+                webcam = pygame.camera.Camera(camera) #'/dev/video60') #cameras[0])
+
+                webcam.start()
+            except Exception as ex:
+                logger.warn("Unable to use camera %s ..." % camera)
 
     # grab first frame
     img = webcam.get_image()
@@ -415,6 +426,8 @@ def F(file_path):
     filenames.append(file_path)
 
 def main():
+    global camera_name
+
     # Initialize the image to send with something
     initial_image = Image.new("L", (YAIL_W,YAIL_H))
     update_yail_data(pack_shades(initial_image))
@@ -431,9 +444,10 @@ def main():
     # Check if any arguments were provided (other than the script name)
     if len(sys.argv) > 1:
         parser = argparse.ArgumentParser(description="Yeets images to YAIL")
-        parser.add_argument('paths', nargs='+', default=None, help='Directory path or list of file paths')
-        parser.add_argument('--extensions', nargs='+', default=['.jpg', '.jpeg', '.gif', '.png'], help='List of file extensions to process')
-        parser.add_argument('--mode', nargs='+', default='9', help='List of file extensions to process')
+        parser.add_argument('paths', nargs='?', default=None, help='Directory path or list of file paths')
+        parser.add_argument('--extensions', nargs='+', default=['.jpg', '.jpeg', '.gif', '.png'], help='List of file extensions to process', required=False)
+        parser.add_argument('--mode', nargs='?', default='9', help='List of file extensions to process', required=False)
+        parser.add_argument('--camera', nargs='?', default=None, help='The camera device to use', required=False)
         
         args = parser.parse_args()
 
@@ -441,13 +455,16 @@ def main():
             gfx_mode = GRAPHICS_8
         elif args.mode == '9':
             gfx_mode = GRAPHICS_9
+
+        if args.camera:
+            camera_name = args.camera
         
-        if len(args.paths) == 1 and os.path.isdir(args.paths[0]):
+        if args.paths is not None and len(args.paths) == 1 and os.path.isdir(args.paths[0]):
             # If a single argument is passed and it's a directory
             directory_path = args.paths[0]
             print("Processing files in directory:")
             process_files(directory_path, args.extensions, F)
-        else:
+        elif args.paths:
             # If multiple file paths are passed
             file_list = args.paths
             print("\nProcessing specific files in list:")
