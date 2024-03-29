@@ -23,6 +23,7 @@ import sys
 logging.basicConfig(level=logging.WARN)
 logger = logging.getLogger(__name__)
 
+SOCKET_WAIT_TIME = 1
 GRAPHICS_8 = 2
 GRAPHICS_9 = 4
 GRAPHICS_RANDOM = 42
@@ -154,7 +155,7 @@ def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None
     # download the body of response by chunk, not immediately
     try:
         if url is not None:
-            logger.info('Loading', url, url.encode())
+            logger.info(f'Loading %s %s' % (url, url.encode()))
 
             file_size = 0
 
@@ -295,7 +296,7 @@ def handle_client_connection(client_socket):
     client_mode = None
 
     connections = connections + 1
-    logger.info('Starting Connection:', connections)
+    logger.info(f'Starting Connection: %d' % connections)
 
     try:
         done = False
@@ -330,7 +331,7 @@ def handle_client_connection(client_socket):
                         logger.warning(f'Problem with %s trying another...', url)
                         url_idx = random.randint(0, len(urls)-1)
                         url = urls[url_idx]
-                        time.sleep(1)
+                        time.sleep(SOCKET_WAIT_TIME)
                 tokens = []
 
             elif tokens[0] == 'files':
@@ -344,7 +345,7 @@ def handle_client_connection(client_socket):
                             logger.warning(f'Problem with %s trying another...', filename)
                             file_idx = random.randint(0, len(filenames)-1)
                             filename = filenames[file_idx]
-                            time.sleep(1)
+                            time.sleep(SOCKET_WAIT_TIME)
                 tokens.pop(0)
 
             elif tokens[0] == 'next':
@@ -358,7 +359,7 @@ def handle_client_connection(client_socket):
                             logger.warning('Problem with image trying another...')
                             url_idx = random.randint(0, len(urls)-1)
                             url = urls[url_idx]
-                            time.sleep(1)
+                            time.sleep(SOCKET_WAIT_TIME)
                     tokens.pop(0)
                 elif client_mode == 'video':
                     send_yail_data(client_socket)
@@ -374,7 +375,7 @@ def handle_client_connection(client_socket):
                                 logger.warning(f'Problem with %s trying another...', filename)
                                 file_idx = random.randint(0, len(filenames)-1)
                                 filename = filenames[file_idx]
-                                time.sleep(1)
+                                time.sleep(SOCKET_WAIT_TIME)
                     tokens.pop(0)
 
             elif tokens[0] == 'gfx':
@@ -399,7 +400,7 @@ def handle_client_connection(client_socket):
         connections = connections - 1
         if connections == 0:   # Maybe should look into killing this thread when there are no video connections.
             camera_done = True
-            time.sleep(1)
+            time.sleep(SOCKET_WAIT_TIME)
             camera_thread = None
 
 def process_files(input_path: Union[str, List[str]], 
@@ -437,26 +438,16 @@ def main():
     bind_ip = '0.0.0.0'
     bind_port = 5556
 
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((bind_ip, bind_port))
-    server.listen(10)  # max backlog of connections
-
-    logger.info('Listening on {}:{}'.format(bind_ip, bind_port))
-
     # Check if any arguments were provided (other than the script name)
     if len(sys.argv) > 1:
         parser = argparse.ArgumentParser(description="Yeets images to YAIL")
         parser.add_argument('paths', nargs='?', default=None, help='Directory path or list of file paths')
         parser.add_argument('--extensions', nargs='+', default=['.jpg', '.jpeg', '.gif', '.png'], help='List of file extensions to process', required=False)
-        parser.add_argument('--mode', nargs='?', default='9', help='List of file extensions to process', required=False)
         parser.add_argument('--camera', nargs='?', default=None, help='The camera device to use', required=False)
+        parser.add_argument('--port', nargs='+', default=None, help='Specify the port to listen too', required=False)
+        parser.add_argument('--loglevel', nargs='+', default=None, help='The level of logging', required=False)
         
         args = parser.parse_args()
-
-        if args.mode == '8':
-            gfx_mode = GRAPHICS_8
-        elif args.mode == '9':
-            gfx_mode = GRAPHICS_9
 
         if args.camera:
             camera_name = args.camera
@@ -471,6 +462,28 @@ def main():
             file_list = args.paths
             print("\nProcessing specific files in list:")
             process_files(file_list, args.extensions, F)
+
+        if args.loglevel:
+            loglevel = args.loglevel[0].upper()
+            if loglevel == 'DEBUG':
+                logger.setLevel(logging.DEBUG)
+            elif loglevel == 'INFO':
+                logger.setLevel(logging.INFO)
+            elif loglevel == 'WARN':
+                logger.setLevel(logging.WARN)
+            elif loglevel == 'ERROR':
+                logger.setLevel(logging.ERROR)
+            elif loglevel == 'CRITICAL':
+                logger.setLevel(logging.CRITICAL)
+
+        if args.port:
+            bind_port = int(args.port[0])
+
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((bind_ip, bind_port))
+    server.listen(10)  # max backlog of connections
+
+    logger.info('Listening on {}:{}'.format(bind_ip, bind_port))
 
     while True:
         client_sock, address = server.accept()
