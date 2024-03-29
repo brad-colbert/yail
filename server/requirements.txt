@@ -1,5 +1,10 @@
+requests>=1.0.0
 duckduckgo_search>=1.0.0
+fastcore>=1.0.0
 pillow>=9.0.0
+tqdm>=1.0.0
+olefile>=0.0.0
+numpy>=1.0.0
 fastcore>=1.0.0
 numpy>=1.24.4
 tqdm>=4.66.2
