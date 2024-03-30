@@ -455,12 +455,12 @@ def main():
         if args.paths is not None and len(args.paths) == 1 and os.path.isdir(args.paths[0]):
             # If a single argument is passed and it's a directory
             directory_path = args.paths[0]
-            print("Processing files in directory:")
+            logger.info("Processing files in directory:")
             process_files(directory_path, args.extensions, F)
         elif args.paths:
             # If multiple file paths are passed
             file_list = args.paths
-            print("\nProcessing specific files in list:")
+            logger.info("Processing specific files in list:")
             process_files(file_list, args.extensions, F)
 
         if args.loglevel:
