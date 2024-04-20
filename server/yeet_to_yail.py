@@ -35,8 +35,6 @@ YAIL_H = 220
 # it won't be written by the server.
 mutex = Lock()
 yail_data = None
-
-#gfx_mode = GRAPHICS_8
 connections = 0
 camera_thread = None
 camera_done = False
@@ -110,8 +108,6 @@ def show_shades(image_data: np.ndarray) -> None:
 
 def convertToYai(image_data: bytearray, gfx_mode: int) -> bytearray:
     import struct
-
-    #global gfx_mode
 
     ttlbytes = image_data.shape[0] * image_data.shape[1]
 
@@ -290,10 +286,9 @@ def camera_handler(gfx_mode: int) -> None:
 def handle_client_connection(client_socket: socket.socket) -> None:
     # Set up a new event loop for this thread
     global connections
-    #global gfx_mode
-    gfx_mode = GRAPHICS_8
     global camera_thread
     global camera_done
+    gfx_mode = GRAPHICS_8
     client_mode = None
 
     connections = connections + 1
