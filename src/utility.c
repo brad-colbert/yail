@@ -59,3 +59,9 @@ void show_error(const char* message)
     show_console();
     cputs(message);
 }
+
+void show_error_pause(const char* message)
+{
+    show_error(message);
+    cgetc();
+}

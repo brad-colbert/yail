@@ -63,6 +63,7 @@ byte imageFileType(const char filename[])
 
 void saveFile(const char filename[])
 {
+    size_t size;
     int fd = open(filename, O_WRONLY);
 
     if(fd >= 0)
@@ -91,6 +92,7 @@ void saveFile(const char filename[])
         #define IMAGE_BLOCK_ONE_TWO_SIZE 4080
         #define IMAGE_BLOCK_THREE_SIZE 640
         b = MEM_TOKEN;
+        size = IMAGE_BLOCK_ONE_TWO_SIZE;
         write(fd, &b, 1);
         write(fd, &size, sizeof(size_t));
         write(fd, image.data, IMAGE_BLOCK_ONE_TWO_SIZE);
@@ -99,6 +101,7 @@ void saveFile(const char filename[])
         write(fd, &size, sizeof(size_t));
         write(fd, (image.data+0x1000), IMAGE_BLOCK_ONE_TWO_SIZE);
 
+        size = IMAGE_BLOCK_THREE_SIZE;
         write(fd, &b, 1);
         write(fd, &size, sizeof(size_t));
         write(fd, (image.data+0x2000), IMAGE_BLOCK_THREE_SIZE);

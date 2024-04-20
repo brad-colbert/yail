@@ -183,16 +183,20 @@ char process_command(byte ntokens)
         }
         else
         {
+            /*
             gotoxy(0,0);
             clrscr();
             cputs("ERROR: File not specified");
-            cgetc();
+            */
+            show_error_pause("ERROR: File not specified");
         }
         #else
+            /*
             gotoxy(0,0);
             clrscr();
             cputs("ERROR: File loading not supported");
-            cgetc();
+            */
+            show_error_pause("ERROR: File not specified");
         #endif
     }
 
@@ -204,15 +208,10 @@ char process_command(byte ntokens)
 
         else
         {
-            gotoxy(0,0);
-            cprintf("ERROR: File not specified");
-            cgetc();
+            show_error_pause("ERROR: File not specified");
         }
         #else
-            gotoxy(0,0);
-            clrscr();
-            cputs("ERROR: File saving not supported");
-            cgetc();
+            show_error_pause("ERROR: File saving not supported");
         #endif
     }
 
@@ -220,9 +219,7 @@ char process_command(byte ntokens)
     {
         if(ntokens < 3)
         {
-            gotoxy(0,0);
-            cputs("ERROR: Must specify a setting and value");
-            cgetc();
+            show_error_pause("ERROR: Must specify a setting and value");
         }
         else
         {
@@ -259,9 +256,7 @@ char process_command(byte ntokens)
     {
         if(ntokens < 2)
         {
-            gotoxy(0,0);
-            cputs("ERROR: URL not specified");
-            cgetc();
+            show_error_pause("ERROR: URL not specified");
         }
         else
         {

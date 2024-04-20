@@ -35,15 +35,13 @@ YAIL_H = 220
 # it won't be written by the server.
 mutex = Lock()
 yail_data = None
-
-gfx_mode = GRAPHICS_8
 connections = 0
 camera_thread = None
 camera_done = False
 filenames = []
 camera_name = None
 
-def fix_aspect(image, crop=False):
+def fix_aspect(image: Image.Image, crop: bool=False) -> Image.Image:
     aspect = YAIL_W/YAIL_H   # YAIL aspect ratio
     aspect_i = 1/aspect
     w = image.size[0]
@@ -75,14 +73,14 @@ def fix_aspect(image, crop=False):
 
     return image
 
-def dither_image(image):
+def dither_image(image: Image.Image) -> Image.Image:
     return image.convert('1')
 
-def pack_bits(image):
+def pack_bits(image: Image.Image) -> np.ndarray:
     bits = np.array(image)
     return np.packbits(bits, axis=1)
 
-def pack_shades(image):
+def pack_shades(image: Image.Image) -> np.ndarray:
     yail = image.resize((int(YAIL_W/4),YAIL_H), Image.LANCZOS)
     yail = yail.convert(dither=Image.FLOYDSTEINBERG, colors=16)
 
@@ -101,17 +99,15 @@ def pack_shades(image):
     
     return combined.astype('int8')
 
-def show_dithered(image):
+def show_dithered(image: Image.Image) -> None:
     image.show()
 
-def show_shades(image_data):
+def show_shades(image_data: np.ndarray) -> None:
     pil_image_yai = Image.fromarray(image_data, mode='L')
     pil_image_yai.resize((320,220), resample=None).show()
 
-def convertToYai(image_data):
+def convertToYai(image_data: bytearray, gfx_mode: int) -> bytearray:
     import struct
-
-    global gfx_mode
 
     ttlbytes = image_data.shape[0] * image_data.shape[1]
 
@@ -124,17 +120,17 @@ def convertToYai(image_data):
 
     return image_yai
 
-def update_yail_data(data, thread_safe=True):
+def update_yail_data(data: np.ndarray, gfx_mode: int, thread_safe: bool = True) -> None:
     global yail_data
     if thread_safe:
         mutex.acquire()
     try:
-        yail_data = convertToYai(data)
+        yail_data = convertToYai(data, gfx_mode)
     finally:
         if thread_safe:
             mutex.release()
 
-def send_yail_data(client_socket, thread_safe=True):
+def send_yail_data(client_socket: socket.socket, thread_safe: bool=True) -> None:
     global yail_data
 
     if thread_safe:
@@ -149,7 +145,7 @@ def send_yail_data(client_socket, thread_safe=True):
         client_socket.sendall(data)
         logger.info('Sent YAIL data')
 
-def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None):  #url, client, gfx_mode):
+def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None) -> bool:
     from io import BytesIO
 
     # download the body of response by chunk, not immediately
@@ -198,7 +194,7 @@ def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None
         elif gfx_mode == GRAPHICS_9:
             image_data = pack_shades(gray)
 
-        image_yai = convertToYai(image_data)
+        image_yai = convertToYai(image_data, gfx_mode)
 
         client.sendall(image_yai)
 
@@ -209,7 +205,7 @@ def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None
         return False
 
 # This uses the DuckDuckGo search engine to find images.  This is handled by the duckduckgo_search package.
-def search_images(term, max_images=1000):
+def search_images(term: str, max_images: int=1000) -> list:
     logger.info(f"Searching for '{term}'")
     with DDGS() as ddgs:
         results = L([r for r in ddgs.images(term, max_results=max_images)])
@@ -220,7 +216,7 @@ def search_images(term, max_images=1000):
 
         return urls
 
-def camera_handler():
+def camera_handler(gfx_mode: int) -> None:
     import pygame.camera
     import pygame.image
 
@@ -287,12 +283,12 @@ def camera_handler():
 
     camera_done = False
 
-def handle_client_connection(client_socket):
+def handle_client_connection(client_socket: socket.socket) -> None:
     # Set up a new event loop for this thread
     global connections
-    global gfx_mode
     global camera_thread
     global camera_done
+    gfx_mode = GRAPHICS_8
     client_mode = None
 
     connections = connections + 1
@@ -433,7 +429,7 @@ def main():
 
     # Initialize the image to send with something
     initial_image = Image.new("L", (YAIL_W,YAIL_H))
-    update_yail_data(pack_shades(initial_image))
+    update_yail_data(pack_shades(initial_image), GRAPHICS_8)
 
     bind_ip = '0.0.0.0'
     bind_port = 5556

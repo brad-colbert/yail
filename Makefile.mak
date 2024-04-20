@@ -7,6 +7,7 @@ PRODUCT=YAIL
 TARGET=atari
 SRC_DIR=src
 #CFLAGS=-Osri
+#CFLAGS=-Os -DYAIL_BUILD_FILE_LOADER
 CFLAGS=-Os
 LINKFLAGS=-D__SYSTEM_CHECK__=1
 #LINKFLAGS=--debug-info -Wl --dbgfile,"myapp.dbg"
