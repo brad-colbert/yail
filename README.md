@@ -38,7 +38,7 @@ Usage: YAIL.XEX [OPTIONS]
 The server is written in python 
 
 To start:
-  python3 yailsrv.py
+  python3 yeet_to_yail.py
 
 The server uses duckduckgo.com as the source for the images.
 It sends your query tokens as the search terms and builds a list of URLs that have the images.
