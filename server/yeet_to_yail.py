@@ -26,9 +26,16 @@ logger = logging.getLogger(__name__)
 SOCKET_WAIT_TIME = 1
 GRAPHICS_8 = 2
 GRAPHICS_9 = 4
+GRAPHICS_VBXE_1 = 0x11
 GRAPHICS_RANDOM = 42
 YAIL_W = 320
 YAIL_H = 220
+
+DL_BLOCK = 0x04
+XDL_BLOCK = 0x05
+PALETTE_BLOCK = 0x06
+IMAGE_BLOCK = 0x07
+
 
 # The yail_data will contain the image that is to be sent.  It
 # is protected with a Mutex so that when the image is being sent
@@ -40,6 +47,40 @@ camera_thread = None
 camera_done = False
 filenames = []
 camera_name = None
+
+def prep_image_for_vbxe(image: Image.Image, target_width: int=YAIL_W, target_height: int=YAIL_H) -> Image.Image:
+    logger.info(f'Image size: {image.size}')
+
+    # Calculate the new size preserving the aspect ratio
+    image_ratio = image.width / image.height
+    target_ratio = target_width / target_height
+
+    if image_ratio > target_ratio:
+        # Image is wider than target, fit to width
+        new_width = target_width
+        new_height = int(target_width / image_ratio)
+    else:
+        # Image is taller than target, fit to height
+        new_width = int(target_height * image_ratio)
+        new_height = target_height
+
+    # Resize the image
+    image = image.resize((new_width, new_height), Image.BILINEAR)
+    logger.info(f'Image new size: {image.size}')
+
+    # Create a new image with the target size and a black background
+    new_image = Image.new('RGB', (target_width, target_height), (0, 0, 0))
+
+    # Calculate the position to paste the resized image onto the black background
+    paste_x = (target_width - image.width) // 2
+    paste_y = (target_height - image.height) // 2
+
+    # Paste the resized image onto the black background
+    new_image.paste(image, (paste_x, paste_y))
+
+    # Replace the original image with the new image
+    return new_image
+
 
 def fix_aspect(image: Image.Image, crop: bool=False) -> Image.Image:
     aspect = YAIL_W/YAIL_H   # YAIL aspect ratio
@@ -120,6 +161,28 @@ def convertToYai(image_data: bytearray, gfx_mode: int) -> bytearray:
 
     return image_yai
 
+def convertToYaiVBXE(image_data: bytes, palette_data: bytes, gfx_mode: int) -> bytearray:
+    import struct
+
+    #ttlbytes = YAIL_W * YAIL_H; # image_data.shape[0] * image_data.shape[1]
+    logger.info('Image data size: %d' % len(image_data))
+    logger.info('Palette data size: %d' % len(palette_data))
+
+    image_yai = bytearray()
+    image_yai += bytes([1, 4, 0])            # version
+    image_yai += bytes([gfx_mode])           # Gfx mode (8,9)
+    image_yai += struct.pack("<B", 2)        # number of memory blocks
+    image_yai += bytes([PALETTE_BLOCK])             # Memory block type
+    image_yai += struct.pack("<I", len(palette_data)) # palette size
+    image_yai += bytearray(palette_data)  # palette
+    image_yai += bytes([IMAGE_BLOCK])                  # Memory block type
+    image_yai += struct.pack("<I", len(image_data)) # num bytes height x width
+    image_yai += bytearray(image_data)       # image
+
+    logger.info('YAI size: %d' % len(image_yai))
+
+    return image_yai
+
 def update_yail_data(data: np.ndarray, gfx_mode: int, thread_safe: bool = True) -> None:
     global yail_data
     if thread_safe:
@@ -147,6 +210,8 @@ def send_yail_data(client_socket: socket.socket, thread_safe: bool=True) -> None
 
 def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None) -> bool:
     from io import BytesIO
+
+    global YAIL_H
 
     # download the body of response by chunk, not immediately
     try:
@@ -184,17 +249,37 @@ def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None
         elif filepath is not None:
             image = Image.open(filepath)
 
-        gray = image.convert(mode='L')
-        gray = fix_aspect(gray)
-        gray = gray.resize((YAIL_W,YAIL_H), Image.LANCZOS)
+        if gfx_mode == GRAPHICS_8 or gfx_mode == GRAPHICS_9:
+            gray = image.convert(mode='L')
+            gray = fix_aspect(gray)
+            gray = gray.resize((YAIL_W,YAIL_H), Image.LANCZOS)
 
-        if gfx_mode == GRAPHICS_8:
-            gray_dithered = dither_image(gray)
-            image_data = pack_bits(gray_dithered)
-        elif gfx_mode == GRAPHICS_9:
-            image_data = pack_shades(gray)
+            if gfx_mode == GRAPHICS_8:
+                gray_dithered = dither_image(gray)
+                image_data = pack_bits(gray_dithered)
+            elif gfx_mode == GRAPHICS_9:
+                image_data = pack_shades(gray)
 
-        image_yai = convertToYai(image_data, gfx_mode)
+            image_yai = convertToYai(image_data, gfx_mode)
+
+        else:  # VBXE mode
+            # Make the image fit out screen format but preserve it's aspect ratio
+            image_resized = prep_image_for_vbxe(image, target_width=320, target_height=240)
+            # Convert the image to use a palette
+            image_resized = image_resized.convert('P', palette=Image.ADAPTIVE, colors=256)
+            logger.info(f'Image size: {image_resized.size}')
+            #image_resized.show()
+            # Get the palette
+            palette = image_resized.getpalette()
+            # Get the image data
+            image_resized = image_resized.tobytes()
+            logger.info(f'Image data size: {len(image_resized)}')
+            # Offset the palette entries by one
+            offset_palette = [0] * 3 + palette[:-3]
+            # Offset the image data by one
+            offset_image_data = bytes((byte + 1) % 256 for byte in image_resized)
+
+            image_yai = convertToYaiVBXE(offset_image_data, offset_palette, gfx_mode)
 
         client.sendall(image_yai)
 
@@ -288,6 +373,7 @@ def handle_client_connection(client_socket: socket.socket) -> None:
     global connections
     global camera_thread
     global camera_done
+    global YAIL_H
     gfx_mode = GRAPHICS_8
     client_mode = None
 
@@ -377,6 +463,9 @@ def handle_client_connection(client_socket: socket.socket) -> None:
             elif tokens[0] == 'gfx':
                 tokens.pop(0)
                 gfx_mode = int(tokens[0])
+                #if gfx_mode > GRAPHICS_9:  # VBXE
+                #    global YAIL_H
+                #    YAIL_H = 240
                 tokens.pop(0)
 
             elif tokens[0] == 'quit':
@@ -476,10 +565,12 @@ def main():
             bind_port = int(args.port[0])
 
     server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((bind_ip, bind_port))
+    #server.bind((bind_ip, bind_port))
+    server.bind(('', bind_port))
     server.listen(10)  # max backlog of connections
 
-    logger.info('Listening on {}:{}'.format(bind_ip, bind_port))
+    #logger.info('Listening on {}:{}'.format(bind_ip, bind_port))
+    logger.info('Listening on {}:{}'.format('', bind_port))
 
     while True:
         client_sock, address = server.accept()
