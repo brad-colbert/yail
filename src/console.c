@@ -130,37 +130,29 @@ char process_command(byte ntokens)
     {
         if(ntokens > 1)
         {
-            switch(tokens[1][0])
+            if (strncmp(tokens[1], "0", 2) == 0)
+                setGraphicsMode(GRAPHICS_0);
+            else if (strncmp(tokens[1], "2", 2) == 0)
             {
-                case '0':
-                    setGraphicsMode(GRAPHICS_0);
-                    break;
-                case '8':
-                    setGraphicsMode(GRAPHICS_8);
-                    break;
-                case '9':
-                    setGraphicsMode(GRAPHICS_9);
-                    break;
-                case '1':
-                    switch(tokens[1][1])
-                    {   case '0':
-                            setGraphicsMode(GRAPHICS_10);
-                            break;
-                        case '1':
-                            setGraphicsMode(GRAPHICS_11);
-                            break;
-                    }
-                    break;
-                case '2':
-                    {
-                    byte new_mode = (settings.gfx_mode & 0x0F) | GRAPHICS_BUFFER_TWO;
-                    setGraphicsMode(new_mode);  // Restore the graphics mode
-                    }
-                    break;
-                case '*':
-                    settings.gfx_mode = '*';  // Randomize the graphics mode
-                    break;
+                byte new_mode = (settings.gfx_mode & 0x0F) | GRAPHICS_BUFFER_TWO;
+                setGraphicsMode(new_mode);
             }
+            else if (strncmp(tokens[1], "8", 2) == 0)
+                setGraphicsMode(GRAPHICS_8);
+            else if (strncmp(tokens[1], "9", 2) == 0)
+                setGraphicsMode(GRAPHICS_9);
+            else if (strncmp(tokens[1], "10", 2) == 0)
+                setGraphicsMode(GRAPHICS_10);
+            else if (strncmp(tokens[1], "11", 2) == 0)
+                setGraphicsMode(GRAPHICS_11);
+            else if (strncmp(tokens[1], "20", 2) == 0)
+            {
+                setGraphicsMode(GRAPHICS_0);
+                clearFrameBuffer();
+                setGraphicsMode(GRAPHICS_20);
+            }
+            else if (strncmp(tokens[1], "*", 2) == 0)
+                settings.gfx_mode = '*';
         }
 
         // Save the graphics mode if not in text mode

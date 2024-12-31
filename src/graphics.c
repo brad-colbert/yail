@@ -6,12 +6,11 @@
 #include "settings.h"
 #include "consts.h"
 #include "types.h"
+#include "vbxe.h"
 
 #include <atari.h>
 #include <peekpoke.h>
-#ifdef DEBUG_GRAPHICS
 #include <conio.h>
-#endif
 
 #include <string.h>
 #include <stdio.h>
@@ -41,6 +40,7 @@
 extern char* console_buff;
 extern byte console_lines;
 extern Settings settings;
+extern struct __vbxe* VBXE;
 
 // Globals
 void* ORG_SDLIST = 0;
@@ -49,7 +49,7 @@ byte ORG_GPRIOR = 0x0;
 byte NMI_STATE = 0x0;
 byte ORG_COLOR1, ORG_COLOR2;
 DLDef dlDef;
-ImageData image = { {0, 0, 0, 0, 0, 0}, framebuffer };
+ImageData image = { {0, 0, 0, 0}, framebuffer };
 
 // DLI definitions
 void disable_9_dli(void);  // prototype for below
@@ -123,6 +123,9 @@ void setGraphicsMode(const byte mode)
     OS.color1 = 14;         // Color maximum luminance
     OS.color2 = 0;          // Background black
 
+    if(VBXE)
+        clear_vbxe(); // Clear the screen
+
     switch(mode)
     {
         case GRAPHICS_0:
@@ -152,10 +155,14 @@ void setGraphicsMode(const byte mode)
         case GRAPHICS_9_2:
             OS.sdlst = &graphics_8_s2_dl;
         break;
+
+        case GRAPHICS_20:
+            setup_VBXE();  // 320x240x256
+        break;
     }
 
     // Set graphics mode specifc things
-    switch(mode & 0x1F) //GRAPHICS_CONSOLE_EN)
+    switch(mode & 0x1F)
     {
         case GRAPHICS_0:
         case GRAPHICS_8:
@@ -169,6 +176,10 @@ void setGraphicsMode(const byte mode)
         break;
         case GRAPHICS_11:
             OS.gprior = ORG_GPRIOR | GFX_11;   // Enable GTIA   
+        break;
+        break;
+        case GRAPHICS_20:
+            // The DXL is set up in setup_VBXE.  Nothing to be done here.
         break;
     }
 
@@ -204,6 +215,9 @@ void makeDisplayList(byte mode)
         case GRAPHICS_9_2:
             dlDef.address = &graphics_8_s2_dl;
         break;
+        case GRAPHICS_20:
+            // The DXL is set up in setup_VBXE.  Nothing to be done here.
+        break;
     } // switch mode
 }
 
@@ -237,6 +251,11 @@ void show_console()
             ANTIC.nmien = NMIEN_DLI | NMIEN_VBI; //0x80 | 0x40;
             OS.botscr = 5;
         }
+        break;
+        case GRAPHICS_20:
+            // ANTIC/GTIA is in gfx 0 so just show the cursor
+            cursor(1);
+        break;
     }
 }
 
@@ -261,12 +280,31 @@ void hide_console()
 
             OS.botscr = 0;
         }
+        break;
+        case GRAPHICS_20:
+            // ANTIC/GTIA is in gfx 0 so just hide the cursor
+            cursor(0);
+        break;
     }
 }
 
 void clearFrameBuffer(void)
 {
-    memset(framebuffer, 0, FRAMEBUFFER_SIZE);
+    switch(settings.gfx_mode)
+    {
+        case GRAPHICS_0:
+        case GRAPHICS_8_CONSOLE:
+        case GRAPHICS_9_CONSOLE:
+        case GRAPHICS_10_CONSOLE:
+        case GRAPHICS_11_CONSOLE:
+        {
+            memset(framebuffer, 0, FRAMEBUFFER_SIZE);
+        }
+        break;
+        case GRAPHICS_20:
+            // Not sure what to do here yet.
+        break;
+    }
 }
 
 // Shows the contents of a display list.

@@ -7,6 +7,7 @@
 #include "utility.h"
 
 #include <stddef.h>
+#include <stdint.h>
 
 //
 #define GRAPHICS_0 0x01
@@ -14,6 +15,8 @@
 #define GRAPHICS_9 0x04
 #define GRAPHICS_10 0x08
 #define GRAPHICS_11 0x10
+// VBXE 320x240x256
+#define GRAPHICS_20 0x11
 #define GRAPHICS_BUFFER_TWO 0x20
 #define GRAPHICS_CONSOLE_EN 0x80
 #define GRAPHICS_8_CONSOLE GRAPHICS_8 | GRAPHICS_CONSOLE_EN
@@ -73,9 +76,23 @@ typedef struct image_header
     unsigned char v2;
     unsigned char v3;
     unsigned char gfx;
+} ImageHeader;
+
+typedef struct block_header_v13
+{
     unsigned char memtkn;
     short size;
-} ImageHeader;
+} BlockHeaderV13;
+
+#define DL_BLOCK 0x04
+#define XDL_BLOCK 0x05
+#define PALETTE_BLOCK 0x06
+#define IMAGE_BLOCK 0x07
+typedef struct block_header_v14
+{
+    uint8_t block_type;
+    uint32_t size;
+} BlockHeaderV14;
 
 //
 typedef struct image_data
