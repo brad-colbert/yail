@@ -5,6 +5,7 @@
 #include "utility.h"
 #include "settings.h"
 #include "types.h"
+#include "vbxe.h"
 
 #include <atari.h>
 #include <conio.h>
@@ -17,6 +18,9 @@
 extern byte buff[];
 extern ImageData image;
 extern Settings settings;
+extern struct __vbxe* VBXE;
+
+//byte palette[256 * 3];
 
 void show_error_and_close_network(const char* message)
 {
@@ -48,20 +52,117 @@ char check_keypress(ushort delay)
 
 byte load_front_buffer()
 {
-    #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
-    #define BUFFER_ONE_BLOCK_THREE_SIZE 640
+    byte status = FN_ERR_UNKNOWN;
+    
+    if(image.header.v2 < 4)
+    {
+        #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
+        #define BUFFER_ONE_BLOCK_THREE_SIZE 640
 
-    byte status = network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
-    if(FN_ERR_OK != status)
-        goto quit;
+        status = network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+        if(FN_ERR_OK != status)
+            goto quit;
 
-    status = network_read(settings.url, (uint8_t*)image.data+0x1000, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
-    if(FN_ERR_OK != status)
-        goto quit;
+        status = network_read(settings.url, (uint8_t*)image.data+0x1000, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+        if(FN_ERR_OK != status)
+            goto quit;
 
-    status = network_read(settings.url, (uint8_t*)image.data+0x2000, BUFFER_ONE_BLOCK_THREE_SIZE);
-    if(FN_ERR_OK != status)
-        goto quit;
+        status = network_read(settings.url, (uint8_t*)image.data+0x2000, BUFFER_ONE_BLOCK_THREE_SIZE);
+        if(FN_ERR_OK != status)
+            goto quit;
+    }
+    else // VBXE
+    {
+        // Yail stream format > 1.3 uses more generalized block types.  The number of blocks is sent as
+        // part of the header.  This will be still left in the socket since our current header structure
+        // doesn't include it.
+        // We will load the palette into a temporary buffer and then iterate to load into the VBXE
+        BlockHeaderV14 block_header;
+        uint8_t i, j, k, num_blocks;
+        
+        clrscr();
+
+        // Read the number of blocks
+        status = network_read(settings.url, (uint8_t*)&num_blocks, sizeof(num_blocks));
+        if(FN_ERR_OK != status)
+        {
+            show_error_and_close_network("Error reading num blocks\n\r");
+            return status;
+        }
+
+        //cprintf("Number of blocks: %d\n\r", num_blocks);
+
+        // Iterate, reading blocks
+        for(i = 0; i < num_blocks; ++i)
+        {
+            // Read the block header
+            status = network_read(settings.url, (uint8_t*)&block_header, sizeof(block_header));
+            if(FN_ERR_OK != status)
+            {
+                show_error_and_close_network("Error reading block header\n\r");
+                return status;
+            }
+
+            //cprintf("Block type: %d, size: %d\n\r", block_header.block_type, block_header.size);
+
+            switch(block_header.block_type)
+            {
+                case IMAGE_BLOCK:  // Image data
+                    // Clear image
+                    clear_vbxe();
+
+                    // Enable the VBXE XDL.  It's fun to watch the image load.
+                    VBXE->VIDEO_CONTROL = 0x03;
+
+                    // Load the image data.  This has to be done in 4K chunks.  Loading into the memory window
+                    // defined by the XDL, which in this case is 0x8000.
+                    for(j = 0; j < 19; ++j)
+                    {
+                        uint16_t byte_to_read = 4096;
+                        if(j == 18)
+                            byte_to_read = 3072;
+                        VBXE->MEM_BANK_SEL = 128 + j;  // MOVE WINDOW STARTING $0000
+                        status = network_read(settings.url, XDL, byte_to_read);
+                        if(FN_ERR_OK != status)
+                            return status;
+                    }
+                    break;
+                case PALETTE_BLOCK:  // Palette, reuse the buff since it's already allocated
+                    // Disable VBXE render
+                    VBXE->VIDEO_CONTROL = 0x00;
+
+                    VBXE->CSEL = 0x00;
+                    VBXE->PSEL = 0x01;
+                    for(j = 0; j < 3; ++j)
+                    {
+                        status = network_read(settings.url, buff, 255);
+                        if(FN_ERR_OK != status)
+                            return status;
+
+                        for(k = 0; k < 255; k += 3)
+                        {
+                            VBXE->CR = buff[k+0];
+                            VBXE->CG = buff[k+1];
+                            VBXE->CB = buff[k+2];
+                        }
+                    }
+                    // read the last 3
+                    status = network_read(settings.url, buff, 3);
+                    if(FN_ERR_OK != status)
+                        return status;
+
+                    VBXE->CR = buff[0];
+                    VBXE->CG = buff[1];
+                    VBXE->CB = buff[2];
+
+                    break;
+                case XDL_BLOCK:  // XDL
+                default:
+                    show_error_and_close_network("Unknown block type\n\r");
+                    return FN_ERR_UNKNOWN;
+            }
+        }
+    }
 
 quit:
     return status;
@@ -181,8 +282,20 @@ char stream_image(char* args[], const byte video)
         // Read the header
         if(FN_ERR_OK != network_read(settings.url, (unsigned char*)&image.header, sizeof(image.header)))
         {
-            show_error_and_close_network("Error reading\n\r");
+            show_error_and_close_network("Error reading header\n\r");
             break;
+        }
+        // cprintf("v=%d,%d,%d gfx=%02X\n\r", 
+        //         image.header.v1, image.header.v2, image.header.v3, image.header.gfx);
+
+        // Read the block information, unused for now
+        if(image.header.v2 < 4)
+        {
+            if(FN_ERR_OK != network_read(settings.url, buff, sizeof(BlockHeaderV13)))
+            {
+                show_error_and_close_network("Error reading block header\n\r");
+                break;
+            }
         }
 
         // Read the image data
