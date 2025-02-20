@@ -2,7 +2,7 @@
 #define SETTINGS_H
 
 #include "types.h"
-#include "fujinet-io.h"
+#include "fujinet-fuji.h"
 
 //
 #define SERVER_URL_SIZE MAX_APPKEY_LEN
@@ -14,6 +14,7 @@
 typedef struct {
     char url[SERVER_URL_SIZE];
     byte gfx_mode;
+    byte blank[2];
 } Settings;
 
 //unsigned char sio_openkey(AppKeyDataBlock* data, unsigned char open_mode, unsigned char key);

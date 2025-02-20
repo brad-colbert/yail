@@ -26,7 +26,8 @@ logger = logging.getLogger(__name__)
 SOCKET_WAIT_TIME = 1
 GRAPHICS_8 = 2
 GRAPHICS_9 = 4
-GRAPHICS_VBXE_1 = 0x11
+GRAPHICS_VBXE_SR = 0x11
+GRAPHICS_VBXE_HR = 0x12
 GRAPHICS_RANDOM = 42
 YAIL_W = 320
 YAIL_H = 220
@@ -48,7 +49,7 @@ camera_done = False
 filenames = []
 camera_name = None
 
-def prep_image_for_vbxe(image: Image.Image, target_width: int=YAIL_W, target_height: int=YAIL_H) -> Image.Image:
+def prep_image_for_vbxe(image: Image.Image, gfx_mode: int, target_width: int=YAIL_W, target_height: int=YAIL_H) -> Image.Image:
     logger.info(f'Image size: {image.size}')
 
     # Calculate the new size preserving the aspect ratio
@@ -65,14 +66,17 @@ def prep_image_for_vbxe(image: Image.Image, target_width: int=YAIL_W, target_hei
         new_height = target_height
 
     # Resize the image
-    image = image.resize((new_width, new_height), Image.BILINEAR)
+    scale = 1
+    if gfx_mode == GRAPHICS_VBXE_HR:
+        scale = 2
+    image = image.resize((new_width*scale, new_height), Image.BILINEAR)
     logger.info(f'Image new size: {image.size}')
 
     # Create a new image with the target size and a black background
-    new_image = Image.new('RGB', (target_width, target_height), (0, 0, 0))
+    new_image = Image.new('RGB', (target_width*scale, target_height), (0, 0, 0))
 
     # Calculate the position to paste the resized image onto the black background
-    paste_x = (target_width - image.width) // 2
+    paste_x = (target_width*scale - image.width) // 2
     paste_y = (target_height - image.height) // 2
 
     # Paste the resized image onto the black background
@@ -82,7 +86,8 @@ def prep_image_for_vbxe(image: Image.Image, target_width: int=YAIL_W, target_hei
     return new_image
 
 
-def fix_aspect(image: Image.Image, crop: bool=False) -> Image.Image:
+def fix_aspect(image: Image.Image, crop: bool=False, target_width: int=YAIL_W, target_height: int=YAIL_H) -> Image.Image:
+    mode = image.mode
     aspect = YAIL_W/YAIL_H   # YAIL aspect ratio
     aspect_i = 1/aspect
     w = image.size[0]
@@ -103,14 +108,16 @@ def fix_aspect(image: Image.Image, crop: bool=False) -> Image.Image:
     else:
         if img_aspect > aspect:  # wider than YAIL aspect
             new_height = int(w * aspect_i)
-            background = Image.new("L", (w,new_height))
+            background = Image.new(mode, (w,new_height))
             background.paste(image, (0, int((new_height-h)/2)))
             image = background
         else:                    # taller than YAIL aspect
             new_width = int(h * aspect)
-            background = Image.new("L", (new_width, h))
+            background = Image.new(mode, (new_width, h))
             background.paste(image, (int((new_width-w)/2), 0))
             image = background
+
+    logger.info(f'New image size: {image.size}')
 
     return image
 
@@ -169,7 +176,7 @@ def convertToYaiVBXE(image_data: bytes, palette_data: bytes, gfx_mode: int) -> b
     logger.info('Palette data size: %d' % len(palette_data))
 
     image_yai = bytearray()
-    image_yai += bytes([1, 4, 0])            # version
+    image_yai += bytes([1, 4, 1])            # version
     image_yai += bytes([gfx_mode])           # Gfx mode (8,9)
     image_yai += struct.pack("<B", 2)        # number of memory blocks
     image_yai += bytes([PALETTE_BLOCK])             # Memory block type
@@ -220,7 +227,7 @@ def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None
 
             file_size = 0
 
-            response = requests.get(url, stream=True, timeout=30)
+            response = requests.get(url, stream=True, timeout=15)  # 15 seconds might be too short...  hmmmm
 
             # get the file name
             filepath = ''
@@ -262,15 +269,17 @@ def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None
 
             image_yai = convertToYai(image_data, gfx_mode)
 
-        else:  # VBXE mode
-            # Make the image fit out screen format but preserve it's aspect ratio
-            image_resized = prep_image_for_vbxe(image, target_width=320, target_height=240)
+        elif gfx_mode == GRAPHICS_VBXE_SR:
+            logger.info(f'Image size: {image.size}')
+            # Make the image fit our screen format but preserve it's aspect ratio
+            image_resized = prep_image_for_vbxe(image, GRAPHICS_VBXE_SR, target_width=320, target_height=240)
             # Convert the image to use a palette
             image_resized = image_resized.convert('P', palette=Image.ADAPTIVE, colors=256)
-            logger.info(f'Image size: {image_resized.size}')
-            #image_resized.show()
+            image_resized.show()
             # Get the palette
             palette = image_resized.getpalette()
+            print(palette)
+
             # Get the image data
             image_resized = image_resized.tobytes()
             logger.info(f'Image data size: {len(image_resized)}')
@@ -280,6 +289,43 @@ def stream_YAI(client: str, gfx_mode: int, url: str = None, filepath: str = None
             offset_image_data = bytes((byte + 1) % 256 for byte in image_resized)
 
             image_yai = convertToYaiVBXE(offset_image_data, offset_palette, gfx_mode)
+
+        elif gfx_mode == GRAPHICS_VBXE_HR:
+            logger.info(f'Image size: {image.size}')
+            # Make the image fit our screen format but preserve it's aspect ratio
+            image_resized = prep_image_for_vbxe(image, GRAPHICS_VBXE_HR, target_width=320, target_height=240)
+            # Convert the image to use a palette
+            image_resized = image_resized.convert('P', palette=Image.ADAPTIVE, colors=16)
+            image_resized.show()
+            # Get the palette
+            palette = image_resized.getpalette()
+            #print(palette)
+
+            # 16 colors images are packet two pixels per byte
+            im_matrix = np.array(image_resized)
+            im_values = im_matrix[:,:]
+
+            im_values = (im_values + 1) % 16   # Shifted the values by one
+
+            evens = im_values[:,::2]
+            odds = im_values[:,1::2]
+
+            # Each byte holds 2 pixels.  The upper four bits for the left pixel and the lower four bits for the right pixel.
+            evens_scaled = evens << 4 # left pixel
+
+            # Combine the two 4bit values into a single byte
+            combined = evens_scaled + odds
+            
+            image_resized = combined.astype('int8')
+
+            # Get the image data
+            image_resized = image_resized.tobytes()
+            logger.info(f'Image data size: {len(image_resized)}')
+            # Offset the palette entries by one
+            offset_palette = [0] * 3 + palette[:-3]
+
+            image_yai = convertToYaiVBXE(image_resized, offset_palette, gfx_mode)
+
 
         client.sendall(image_yai)
 

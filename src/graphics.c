@@ -157,7 +157,8 @@ void setGraphicsMode(const byte mode)
         break;
 
         case GRAPHICS_20:
-            setup_VBXE();  // 320x240x256
+        case GRAPHICS_21:
+            setup_VBXE();  // 320x240x256 or 640x240x16
         break;
     }
 
@@ -179,6 +180,7 @@ void setGraphicsMode(const byte mode)
         break;
         break;
         case GRAPHICS_20:
+        case GRAPHICS_21:
             // The DXL is set up in setup_VBXE.  Nothing to be done here.
         break;
     }
@@ -216,6 +218,7 @@ void makeDisplayList(byte mode)
             dlDef.address = &graphics_8_s2_dl;
         break;
         case GRAPHICS_20:
+        case GRAPHICS_21:
             // The DXL is set up in setup_VBXE.  Nothing to be done here.
         break;
     } // switch mode
@@ -253,6 +256,7 @@ void show_console()
         }
         break;
         case GRAPHICS_20:
+        case GRAPHICS_21:
             // ANTIC/GTIA is in gfx 0 so just show the cursor
             cursor(1);
         break;
@@ -282,6 +286,7 @@ void hide_console()
         }
         break;
         case GRAPHICS_20:
+        case GRAPHICS_21:
             // ANTIC/GTIA is in gfx 0 so just hide the cursor
             cursor(0);
         break;
@@ -302,6 +307,7 @@ void clearFrameBuffer(void)
         }
         break;
         case GRAPHICS_20:
+        case GRAPHICS_21:
             // Not sure what to do here yet.
         break;
     }

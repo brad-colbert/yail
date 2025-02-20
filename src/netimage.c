@@ -13,6 +13,7 @@
 #include <stdbool.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 //
 extern byte buff[];
@@ -52,23 +53,26 @@ char check_keypress(ushort delay)
 
 byte load_front_buffer()
 {
-    byte status = FN_ERR_UNKNOWN;
+    //byte status = FN_ERR_UNKNOWN;
+    uint16_t num_bytes;
     
     if(image.header.v2 < 4)
     {
         #define BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE 4080
         #define BUFFER_ONE_BLOCK_THREE_SIZE 640
 
-        status = network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
-        if(FN_ERR_OK != status)
+        uint16_t num_bytes;
+
+        num_bytes = network_read(settings.url, (uint8_t*)image.data, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+        if(0 > num_bytes)
             goto quit;
 
-        status = network_read(settings.url, (uint8_t*)image.data+0x1000, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
-        if(FN_ERR_OK != status)
+        num_bytes = network_read(settings.url, (uint8_t*)image.data+0x1000, BUFFER_ONE_BLOCK_ONE_AND_TWO_SIZE);
+        if(0 > num_bytes)
             goto quit;
 
-        status = network_read(settings.url, (uint8_t*)image.data+0x2000, BUFFER_ONE_BLOCK_THREE_SIZE);
-        if(FN_ERR_OK != status)
+        num_bytes = network_read(settings.url, (uint8_t*)image.data+0x2000, BUFFER_ONE_BLOCK_THREE_SIZE);
+        if(0 > num_bytes)
             goto quit;
     }
     else // VBXE
@@ -78,32 +82,35 @@ byte load_front_buffer()
         // doesn't include it.
         // We will load the palette into a temporary buffer and then iterate to load into the VBXE
         BlockHeaderV14 block_header;
-        uint8_t i, j, k, num_blocks;
+        uint16_t j;
+        uint8_t i, num_blocks;
         
         clrscr();
 
         // Read the number of blocks
-        status = network_read(settings.url, (uint8_t*)&num_blocks, sizeof(num_blocks));
-        if(FN_ERR_OK != status)
+        num_bytes = network_read(settings.url, &num_blocks, sizeof(num_blocks));
+        if(0 > num_bytes)
         {
             show_error_and_close_network("Error reading num blocks\n\r");
-            return status;
+            return num_bytes;
         }
 
         //cprintf("Number of blocks: %d\n\r", num_blocks);
+        VBXE->VIDEO_CONTROL = 0x03;
 
         // Iterate, reading blocks
         for(i = 0; i < num_blocks; ++i)
         {
             // Read the block header
-            status = network_read(settings.url, (uint8_t*)&block_header, sizeof(block_header));
-            if(FN_ERR_OK != status)
+            num_bytes = network_read(settings.url, (uint8_t*)&block_header, sizeof(block_header));
+            if(0 > num_bytes)
             {
                 show_error_and_close_network("Error reading block header\n\r");
-                return status;
+                return num_bytes;
             }
 
-            //cprintf("Block type: %d, size: %d\n\r", block_header.block_type, block_header.size);
+            //cprintf("Block type: %d, size: ", block_header.block_type);
+            //cprintf("%02X%02X%02X%02X\n\r", ((uint8_t*)&block_header.size)[3], ((uint8_t*)&block_header.size)[2], ((uint8_t*)&block_header.size)[1], ((uint8_t*)&block_header.size)[0]);
 
             switch(block_header.block_type)
             {
@@ -122,39 +129,38 @@ byte load_front_buffer()
                         if(j == 18)
                             byte_to_read = 3072;
                         VBXE->MEM_BANK_SEL = 128 + j;  // MOVE WINDOW STARTING $0000
-                        status = network_read(settings.url, XDL, byte_to_read);
-                        if(FN_ERR_OK != status)
-                            return status;
+                        num_bytes = network_read(settings.url, XDL, byte_to_read);
+                        if(0 > num_bytes)
+                            return num_bytes;
                     }
                     break;
                 case PALETTE_BLOCK:  // Palette, reuse the buff since it's already allocated
                     // Disable VBXE render
-                    VBXE->VIDEO_CONTROL = 0x00;
+                    //VBXE->VIDEO_CONTROL = 0x00;
 
                     VBXE->CSEL = 0x00;
                     VBXE->PSEL = 0x01;
-                    for(j = 0; j < 3; ++j)
                     {
-                        status = network_read(settings.url, buff, 255);
-                        if(FN_ERR_OK != status)
-                            return status;
-
-                        for(k = 0; k < 255; k += 3)
+                        uint8_t* palette = (uint8_t*)malloc((uint16_t)block_header.size);
+                        if(NULL == palette)
                         {
-                            VBXE->CR = buff[k+0];
-                            VBXE->CG = buff[k+1];
-                            VBXE->CB = buff[k+2];
+                            show_error_and_close_network("Error allocating palette buffer\n");
+                            break;
                         }
+                        num_bytes = network_read(settings.url, palette, (uint16_t)block_header.size);
+                        if(0 > num_bytes)
+                        {
+                            show_error_and_close_network("Error reading palette\n");
+                            break;
+                        }
+                        for(j = 0; j < (uint16_t)block_header.size; j+=3)
+                        {
+                            VBXE->CR = palette[j+0];
+                            VBXE->CG = palette[j+1];
+                            VBXE->CB = palette[j+2];
+                        }
+                        free(palette);
                     }
-                    // read the last 3
-                    status = network_read(settings.url, buff, 3);
-                    if(FN_ERR_OK != status)
-                        return status;
-
-                    VBXE->CR = buff[0];
-                    VBXE->CG = buff[1];
-                    VBXE->CB = buff[2];
-
                     break;
                 case XDL_BLOCK:  // XDL
                 default:
@@ -165,7 +171,7 @@ byte load_front_buffer()
     }
 
 quit:
-    return status;
+    return 0;
 }
 
 byte load_back_buffer()
@@ -174,20 +180,22 @@ byte load_back_buffer()
     #define BUFFER_TWO_BLOCK_TWO_SIZE 4080
     #define BUFFER_TWO_BLOCK_THREE_SIZE 1280
 
-    byte status = network_read(settings.url, (uint8_t*)0x8280, BUFFER_TWO_BLOCK_ONE_SIZE);
-    if(FN_ERR_OK != status)
+    uint16_t num_bytes;
+
+    num_bytes = network_read(settings.url, (uint8_t*)0x8280, BUFFER_TWO_BLOCK_ONE_SIZE);
+    if(0 > num_bytes)
         goto quit;
 
-    status = network_read(settings.url, (uint8_t*)0x9000, BUFFER_TWO_BLOCK_TWO_SIZE);
-    if(FN_ERR_OK != status)
+    num_bytes = network_read(settings.url, (uint8_t*)0x9000, BUFFER_TWO_BLOCK_TWO_SIZE);
+    if(0 > num_bytes)
         goto quit;
 
-    status = network_read(settings.url, (uint8_t*)0xA000, BUFFER_TWO_BLOCK_THREE_SIZE);
-    if(FN_ERR_OK != status)
+    num_bytes = network_read(settings.url, (uint8_t*)0xA000, BUFFER_TWO_BLOCK_THREE_SIZE);
+    if(0 > num_bytes)
         goto quit;
 
 quit:
-    return status;
+    return 0;
 }
 
 char stream_image(char* args[], const byte video)
@@ -262,7 +270,7 @@ char stream_image(char* args[], const byte video)
     }
     else if(video)
         memcpy(buff, "video", 5);
-    else  // now search terms provided so just stream files from the server
+    else  // no search terms provided for the stream command so just stream files from the server (path must be set on server startup)
         memcpy(buff, "files", 5);
 
     i = strlen((char*)buff);
@@ -279,8 +287,11 @@ char stream_image(char* args[], const byte video)
 
     while(true)
     {
+        uint16_t num_bytes;
+
         // Read the header
-        if(FN_ERR_OK != network_read(settings.url, (unsigned char*)&image.header, sizeof(image.header)))
+        num_bytes = network_read(settings.url, (unsigned char*)&image.header, sizeof(image.header));
+        if(0 > num_bytes)
         {
             show_error_and_close_network("Error reading header\n\r");
             break;
@@ -291,7 +302,8 @@ char stream_image(char* args[], const byte video)
         // Read the block information, unused for now
         if(image.header.v2 < 4)
         {
-            if(FN_ERR_OK != network_read(settings.url, buff, sizeof(BlockHeaderV13)))
+            num_bytes = network_read(settings.url, buff, sizeof(BlockHeaderV13));
+            if(0 > num_bytes)
             {
                 show_error_and_close_network("Error reading block header\n\r");
                 break;
@@ -322,7 +334,8 @@ char stream_image(char* args[], const byte video)
                     break;
                 }
                 #else
-                if(FN_ERR_OK != network_read(settings.url, (uint8_t*)0x8280, 8800))
+                num_bytes = network_read(settings.url, (uint8_t*)0x8280, 8800);
+                if(0 > num_bytes)
                 {
                     show_error_and_close_network("Error reading\n\r");
                     break;

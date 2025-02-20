@@ -1,39 +1,42 @@
 #include "vbxe.h"
 #include "xdlc.h"
 #include "utility.h"
+#include "settings.h"
+#include "graphics.h"
 
 #include <conio.h>
 
+#include <atari.h>
 #include <string.h>
 #include <stdbool.h>
 
-struct __vbxe* VBXE = NULL; // Store the pointer in the zero page
+extern Settings settings;
+extern byte framebuffer[];
+
+struct __vbxe* VBXE = NULL; // Empty if there is no VBXE present
 
 void setup_VBXE(void)
 {
     // The memory window to the VBXE
-    int i;
-
     if(VBXE_D640.CORE_VERSION != 0x10 && (VBXE_D640.MINOR_BERSION & 0x70) != 0x20) {
         // Try the second address
         if(VBXE_D740.CORE_VERSION != 0x10 && (VBXE_D740.MINOR_BERSION & 0x70) != 0x20) {
             show_error("VBXE not detected\n\r");
             return;
         }
-        
         else
             VBXE = &VBXE_D740;
     }
     else
         VBXE = &VBXE_D640;
 
-    cprintf("VBXE detected, %04X\n", VBXE);
+    //cprintf("VBXE detected, %04X\n\r", VBXE);
 
-    VBXE->VIDEO_CONTROL = 0x02;
+    VBXE->VIDEO_CONTROL = 0x82;    // No-trans and 
 
-    // Set memory window location to 0x8000 and let only the CPU have access
-    VBXE->MEMAC_CTRL = 0x88;
-    VBXE->MEM_BANK_SEL = 0x80;
+    // Set memory window location to the same location as our "Frame Buffer".
+    VBXE->MEM_BANK_SEL = (uint8_t)((uint16_t)&framebuffer[0] >> 1); //0x60;
+    VBXE->MEMAC_CTRL = 0x88; // let only the CPU have access
 
     // XDL ADDRESS, this is placed after the image on a 4K boundary ($1000)
     // The image will take up 320x240 (76800, $12C00) bytes.  This is 19 banks (@ $4096 per bank),
@@ -46,7 +49,10 @@ void setup_VBXE(void)
 
     // Setup XDL
     XDL[0] = XDLC_GMON | XDLC_RPTL | XDLC_OVADR; // OVERLAY, REPEAT, SET OVADR
-    XDL[1] = XDLC_ATT | XDLC_END; // ATTRIB, END XDL
+    //if(GRAPHICS_20 == settings.gfx_mode)
+        XDL[1] = XDLC_ATT | XDLC_END; // ATTRIB, END XDL
+    //else if(GRAPHICS_21 == settings.gfx_mode)
+    //    XDL[1] = XDLC_ATT | XDLC_HR | XDLC_END; // ATTRIB, HR, END XDL
     XDL[2] = 239; // Repeat 239 lines
     // Overlay location (0x0000)
     XDL[3] = 0x00;
@@ -63,7 +69,10 @@ void setup_VBXE(void)
     VBXE->VIDEO_CONTROL = 0x00;
 
     // Clear the screen
-    clear_vbxe();   
+    clear_vbxe();
+
+    // Disable ANTIC
+    //OS.sdmctl &= ~0x20;
 }
 
 void clear_vbxe() {
