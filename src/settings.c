@@ -1,7 +1,7 @@
 #include "settings.h"
 #include "graphics.h"
 #include "utility.h"
-#include "fujinet-io.h"
+#include "fujinet-fuji.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -22,6 +22,7 @@ Settings settings;
 // Externals
 extern byte buff[];
 
+/*
 unsigned char sio_openkey(AppKeyDataBlock* data, unsigned char open_mode, unsigned char key)
 {
     data->open.creator = FN_CREATOR_ID;
@@ -32,9 +33,11 @@ unsigned char sio_openkey(AppKeyDataBlock* data, unsigned char open_mode, unsign
 
     return fn_io_appkey_open(&data->open);
 }
+*/
 
 uint8_t get_settings()
 {
+    #if 0
     AppKeyDataBlock data;
     uint8_t r;
 
@@ -91,6 +94,37 @@ uint8_t get_settings()
     }
     else // use default
         setGraphicsMode(DEFAULT_GFX_MODE);
+    #endif
+
+    uint16_t count;
+
+    // Set the base key information
+    fuji_set_appkey_details(FN_CREATOR_ID, (uint8_t)FN_APP_ID, MAX_APPKEY_LEN);
+
+    // URL Read the key
+    if (0 == fuji_read_appkey(FN_URL_KEY_ID, &count, (uint8_t *)buff))
+    {
+        uint16_t keylen = strlen(DEFAULT_URL);
+
+        // Key doesn't exist. Write the default URL
+        strncpy(settings.url, DEFAULT_URL, SERVER_URL_SIZE);
+        fuji_write_appkey(FN_URL_KEY_ID, keylen, (uint8_t *)&settings.url);
+    }
+    else // key exists
+    {
+        // Already in settings.url
+        strncpy(settings.url, (char*)buff, count);
+        settings.url[count] = 0x00;
+    }
+
+    // GFX Read the key
+    if (0 == fuji_read_appkey(FN_GFX_KEY_ID, &count, (uint8_t *)buff))
+    {
+        // Key doesn't exist. Write the default GFX mode
+        buff[0] = DEFAULT_GFX_MODE;
+        fuji_write_appkey(FN_GFX_KEY_ID, 1, (uint8_t *)&buff[0]);
+    }
+    setGraphicsMode((byte)buff[0]);
 
     // Add more settings below...
 
@@ -99,6 +133,7 @@ uint8_t get_settings()
 
 uint8_t put_settings(byte select)
 {
+    #if 0
     AppKeyDataBlock data;
     uint8_t r;
 
@@ -139,6 +174,27 @@ uint8_t put_settings(byte select)
         default:
             return 1;
     }
+    #endif
+    switch(select)
+    {
+        case SETTINGS_NONE:
+            return 0;
+        case SETTINGS_URL:
+        {
+            uint16_t urllen = strlen(settings.url);
 
-    return 0;
+            // Configure the key for writing
+            fuji_set_appkey_details(FN_CREATOR_ID, (uint8_t)FN_APP_ID, MAX_APPKEY_LEN);
+            return fuji_write_appkey(FN_URL_KEY_ID, urllen, (uint8_t *)settings.url);
+        }
+        break;
+        case SETTINGS_GFX:
+        {
+            fuji_set_appkey_details(FN_CREATOR_ID, (uint8_t)FN_APP_ID, MAX_APPKEY_LEN);
+            return fuji_write_appkey(FN_GFX_KEY_ID, 1, (uint8_t *)&settings.gfx_mode);
+        }
+        break;
+        default:
+            return 0;
+    }
 }

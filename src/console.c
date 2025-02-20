@@ -7,7 +7,7 @@
 #include "consts.h"
 #include "settings.h"
 #include "types.h"
-#include "fujinet-io.h"
+//#include "fujinet-io.h"
 #include "utility.h"
 
 #include <atari.h>
@@ -40,12 +40,12 @@ char CONSOLE_BUFF[GFX_0_MEM_LINE * CONSOLE_LINES];
 #else
 #define CONSOLE_BUFF ((byte*)((ushort*)ORG_SDLIST)[2])
 #endif
-char* tokens[8]; // = { 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0 };  // Maximum of 8 tokens
+char* tokens[8];
 
 void reset_console(void)
 {
-    memset(CONSOLE_BUFF, 0, GFX_0_MEM_LINE * CONSOLE_LINES);//console_lines); // wipe all of the console mem
-    gotoxy(0,0);                   // start at the begining of the input line
+    memset(CONSOLE_BUFF, 0, GFX_0_MEM_LINE * CONSOLE_LINES); // wipe all of the console mem
+    gotoxy(0,0);                                             // start at the begining of the input line
 }
 
 #define SEARCHING_FOR_TOKEN 1
@@ -147,16 +147,20 @@ char process_command(byte ntokens)
                 setGraphicsMode(GRAPHICS_11);
             else if (strncmp(tokens[1], "20", 2) == 0)
             {
-                setGraphicsMode(GRAPHICS_0);
-                clearFrameBuffer();
+                setGraphicsMode(GRAPHICS_0);  // VBXE renders both the ANTIC and it's own output.  ANTIC is the console.
                 setGraphicsMode(GRAPHICS_20);
+            }
+            else if (strncmp(tokens[1], "21", 2) == 0)
+            {
+                setGraphicsMode(GRAPHICS_0);  // VBXE renders both the ANTIC and it's own output.  ANTIC is the console.
+                setGraphicsMode(GRAPHICS_21);
             }
             else if (strncmp(tokens[1], "*", 2) == 0)
                 settings.gfx_mode = '*';
         }
 
         // Save the graphics mode if not in text mode
-        if(settings.gfx_mode > GRAPHICS_0 && settings.gfx_mode <= GRAPHICS_11)
+        if(settings.gfx_mode > GRAPHICS_0 && settings.gfx_mode <= GRAPHICS_20)
             put_settings(SETTINGS_GFX);  // save the graphics mode on the FN
     }
 
@@ -170,24 +174,13 @@ char process_command(byte ntokens)
         #ifdef YAIL_BUILD_FILE_LOADER
         if(ntokens > 1)
         {
-            //internal_to_atascii(tokens[1], 40);
             load_image_file(tokens[1]);
         }
         else
         {
-            /*
-            gotoxy(0,0);
-            clrscr();
-            cputs("ERROR: File not specified");
-            */
             show_error_pause("ERROR: File not specified");
         }
         #else
-            /*
-            gotoxy(0,0);
-            clrscr();
-            cputs("ERROR: File loading not supported");
-            */
             show_error_pause("ERROR: File not specified");
         #endif
     }

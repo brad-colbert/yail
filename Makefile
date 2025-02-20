@@ -19,7 +19,7 @@ PROGRAM := $(PROJECT)
 # Path(s) to additional libraries required for linking the program
 # Use only if you don't want to place copies of the libraries in SRCDIR
 # Default: none
-LIBS	:= fujinet-lib/fujinet-atari-2.2.1.lib
+LIBS	:= fujinet-lib/fujinet-atari-4.7.4.lib
 
 INCLUDES := -Ifujinet-lib/
 
@@ -41,7 +41,7 @@ ASFLAGS =
 # Additional linker flags and options.
 # Default: none
 LDFLAGS = $(LDFLAGS.$(TARGETS)) --cpu 6502
-LDFLAGS.atarixl = --mapfile $(PROGRAM).map -Ln $(PROGRAM).lbl
+LDFLAGS = --mapfile $(PROGRAM).map -Ln $(PROGRAM).lbl
  
 # Path to the directory containing C and ASM sources.
 # Default: src
@@ -53,7 +53,7 @@ OBJDIR :=
  
 # Command used to run the emulator.
 # Default: depending on target platform. For default (c64) target: x64 -kernal kernal -VICIIdsize -autoload
-EMUCMD :=
+EMUCMD := /usr/bin/atari800
  
 # Optional commands used before starting the emulation process, and after finishing it.
 # Default: none
