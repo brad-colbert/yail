@@ -369,11 +369,13 @@ def camera_handler(gfx_mode: int) -> None:
             try:
                 logger.info("Trying camera %s ..." % camera)
 
-                webcam = pygame.camera.Camera(camera) #'/dev/video60') #cameras[0])
+                webcam = pygame.camera.Camera(camera)
 
                 webcam.start()
+
+                break
             except Exception as ex:
-                logger.warn("Unable to use camera %s ..." % camera)
+                logger.warning("Unable to use camera %s ..." % camera)
 
     # grab first frame
     img = webcam.get_image()
@@ -400,9 +402,9 @@ def camera_handler(gfx_mode: int) -> None:
 
         if gfx_mode == GRAPHICS_8:
             gray = dither_image(gray)
-            update_yail_data(pack_bits(gray))
+            update_yail_data(pack_bits(gray), gfx_mode=gfx_mode)
         elif gfx_mode == GRAPHICS_9:
-            update_yail_data(pack_shades(gray))
+            update_yail_data(pack_shades(gray), gfx_mode=gfx_mode)
 
         # draw frame
         if SHOW_WEBCAM_VIEW:
@@ -442,7 +444,7 @@ def handle_client_connection(client_socket: socket.socket) -> None:
                 client_mode = 'video'
                 if camera_thread is None:
                     camera_done = False
-                    camera_thread = Thread(target=camera_handler)
+                    camera_thread = Thread(target=camera_handler, args=[gfx_mode])
                     camera_thread.daemon = True
                     camera_thread.start()
                 send_yail_data(client_socket)
